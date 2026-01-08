@@ -71,33 +71,24 @@ This means you won't be spammed with notifications for every response.
 
 ## Message Compression (Optional)
 
-Feishu doesn't render Markdown. Enable LLM compression for cleaner messages:
+Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
 
-Create `~/.claude/gaap.json`:
+Run `/gaap:setup` or create `~/.claude/gaap.json`:
 
 ```json
 {
   "message_format": "compressed",
   "compress": {
-    "provider": "openai",
+    "base_url": "https://api.deepseek.com",
     "model": "deepseek-chat",
-    "api_key": "sk-xxx",
-    "base_url": "https://api.deepseek.com/v1"
+    "api_key": "$DEEPSEEK_API_KEY"
   }
 }
 ```
 
-### Supported Providers
+Supports any OpenAI-compatible API (DeepSeek, GLM, Ollama, vLLM, etc.) or Anthropic API.
 
-| Provider | base_url | Model |
-|----------|----------|-------|
-| Anthropic | (default) | claude-3-haiku-20240307 |
-| DeepSeek | https://api.deepseek.com/v1 | deepseek-chat |
-| GLM | https://open.bigmodel.cn/api/paas/v4 | glm-4-flash |
-| OpenAI | https://api.openai.com/v1 | gpt-4o-mini |
-| Ollama | http://localhost:11434/v1 | llama3.2 |
-
-If compression fails, the plugin automatically falls back to sending the full message.
+API key supports `$ENV_VAR` format. Compression failure auto-falls back to full message.
 
 ## Uninstall
 

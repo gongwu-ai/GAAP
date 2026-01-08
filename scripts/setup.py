@@ -19,44 +19,6 @@ CYAN = "\033[36m"
 RED = "\033[31m"
 RESET = "\033[0m"
 
-PRESETS = {
-    "1": {
-        "name": "DeepSeek",
-        "base_url": "https://api.deepseek.com",
-        "model": "deepseek-chat",
-        "env_key": "DEEPSEEK_API_KEY"
-    },
-    "2": {
-        "name": "Anthropic Haiku",
-        "base_url": "https://api.anthropic.com",
-        "model": "claude-3-haiku-20240307",
-        "env_key": "ANTHROPIC_API_KEY"
-    },
-    "3": {
-        "name": "GLM (智谱)",
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "model": "glm-4-flash",
-        "env_key": "GLM_API_KEY"
-    },
-    "4": {
-        "name": "OpenAI",
-        "base_url": "https://api.openai.com",
-        "model": "gpt-4o-mini",
-        "env_key": "OPENAI_API_KEY"
-    },
-    "5": {
-        "name": "Ollama (本地)",
-        "base_url": "http://localhost:11434",
-        "model": "llama3.2",
-        "env_key": None
-    },
-    "6": {
-        "name": "自定义 Endpoint",
-        "base_url": None,
-        "model": None,
-        "env_key": None
-    }
-}
 
 
 def clear_screen():
@@ -124,47 +86,28 @@ def setup_compression():
 {YELLOW}消息压缩功能:{RESET}
 飞书不渲染 Markdown，使用 LLM 将消息压缩成口语化格式。
 压缩失败会自动回退到全量发送。
+
+{YELLOW}支持的 API 格式:{RESET}
+• OpenAI 兼容格式 (DeepSeek, GLM, Ollama, vLLM 等)
+• Anthropic 格式 (base_url 包含 "anthropic")
 """)
 
     choice = get_input("启用消息压缩? (y/N)", "n").lower()
 
     if choice != 'y':
-        # Save config with compression disabled
         config = {"message_format": "full"}
         save_config(config)
         print(f"\n{GREEN}✓ 将发送全量消息{RESET}")
         return True
 
-    # Show provider options
-    print(f"\n{BOLD}选择 LLM Provider:{RESET}\n")
-    for key, preset in PRESETS.items():
-        print(f"  {CYAN}{key}{RESET}. {preset['name']}")
+    # Get custom endpoint configuration
+    print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
 
-    choice = get_input("\n选择", "1")
-    preset = PRESETS.get(choice, PRESETS["1"])
+    base_url = get_input("Base URL (如 https://api.deepseek.com)")
+    model = get_input("Model 名称 (如 deepseek-chat)")
 
-    # Get configuration
-    if preset["base_url"]:
-        base_url = preset["base_url"]
-        model = preset["model"]
-    else:
-        base_url = get_input("Base URL (如 https://api.example.com)")
-        model = get_input("Model 名称")
-
-    # Get API key
-    if preset["env_key"]:
-        env_val = os.environ.get(preset["env_key"], "")
-        if env_val:
-            print(f"\n检测到环境变量 {preset['env_key']}")
-            use_env = get_input("使用环境变量中的 key? (Y/n)", "y").lower()
-            if use_env != 'n':
-                api_key = f"${preset['env_key']}"
-            else:
-                api_key = get_input("API Key")
-        else:
-            api_key = get_input("API Key")
-    else:
-        api_key = get_input("API Key (无需则留空)", "")
+    print(f"\n{YELLOW}API Key 支持环境变量格式，如 $DEEPSEEK_API_KEY{RESET}")
+    api_key = get_input("API Key (无需则留空)", "")
 
     # Save config
     config = {
@@ -178,7 +121,7 @@ def setup_compression():
     save_config(config)
 
     print(f"\n{GREEN}✓ 压缩配置已保存{RESET}")
-    print(f"  Provider: {preset['name']}")
+    print(f"  Base URL: {base_url}")
     print(f"  Model: {model}")
     return True
 
