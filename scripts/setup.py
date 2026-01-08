@@ -79,8 +79,23 @@ def setup_webhook():
         return False
 
 
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+
 def setup_compression():
     print_step(2, 3, "配置消息压缩 (可选)")
+
+    # Load existing config
+    existing = load_config()
+    compress_cfg = existing.get("compress", {})
+    is_compressed = existing.get("message_format") == "compressed"
 
     print(f"""
 {YELLOW}消息压缩功能:{RESET}
@@ -90,7 +105,8 @@ def setup_compression():
 使用 Anthropic API (Haiku) 进行压缩。
 """)
 
-    choice = get_input("启用消息压缩? (y/N)", "n").lower()
+    default_enable = "y" if is_compressed else "n"
+    choice = get_input(f"启用消息压缩? (y/N)", default_enable).lower()
 
     if choice != 'y':
         config = {"message_format": "full"}
@@ -98,19 +114,21 @@ def setup_compression():
         print(f"\n{GREEN}✓ 将发送全量消息{RESET}")
         return True
 
-    # Get custom endpoint configuration
+    # Get custom endpoint configuration with existing values as defaults
     print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
 
-    base_url = get_input("Base URL", "https://api.anthropic.com")
-    model = get_input("Model", "claude-3-haiku-20240307")
+    base_url = get_input("Base URL", compress_cfg.get("base_url", "https://api.anthropic.com"))
+    model = get_input("Model", compress_cfg.get("model", "claude-3-haiku-20240307"))
 
     print(f"\n{YELLOW}支持环境变量格式，如 $ANTHROPIC_API_KEY{RESET}")
-    api_key = get_input("API Key", "$ANTHROPIC_API_KEY")
+    api_key = get_input("API Key", compress_cfg.get("api_key", "$ANTHROPIC_API_KEY"))
 
+    existing_lang = compress_cfg.get("lang", "zh")
     print(f"\n{BOLD}压缩语言:{RESET}")
     print(f"  {CYAN}1{RESET}. 中文 (zh)")
     print(f"  {CYAN}2{RESET}. English (en)")
-    lang_choice = get_input("\n选择", "1")
+    default_lang = "2" if existing_lang == "en" else "1"
+    lang_choice = get_input("\n选择", default_lang)
     lang = "en" if lang_choice == "2" else "zh"
 
     # Save config
