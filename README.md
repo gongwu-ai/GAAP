@@ -15,16 +15,18 @@ Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude n
 
 ## Installation
 
+**Option 1: From GitHub (recommended)**
 ```bash
-# Add the marketplace
-claude marketplace add github gongwu-ai/GAAP
-
-# Install the plugin
-claude plugin install gaap
+claude plugin add github:gongwu-ai/GAAP
 ```
 
-Or install from local directory:
+**Option 2: Via Marketplace**
+```bash
+/plugin marketplace add gongwu-ai/GAAP
+/plugin install gaap@gaap
+```
 
+**Option 3: Local install**
 ```bash
 git clone https://github.com/gongwu-ai/GAAP.git
 claude plugin install ./GAAP

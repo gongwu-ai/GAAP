@@ -1,0 +1,19 @@
+{
+  "name": "gaap",
+  "owner": {
+    "name": "gongwu-ai",
+    "email": "wenhao.deng@foxmail.com"
+  },
+  "plugins": [
+    {
+      "name": "gaap",
+      "source": ".",
+      "description": "Feishu/Lark notifications for Claude Code - Get notified when Claude needs your input (鴿)",
+      "version": "1.0.0",
+      "author": {
+        "name": "gongwu-ai"
+      },
+      "keywords": ["feishu", "lark", "notification", "webhook", "chinese"]
+    }
+  ]
+}
