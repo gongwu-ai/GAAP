@@ -87,9 +87,7 @@ def setup_compression():
 飞书不渲染 Markdown，使用 LLM 将消息压缩成口语化格式。
 压缩失败会自动回退到全量发送。
 
-{YELLOW}支持的 API 格式:{RESET}
-• OpenAI 兼容格式 (DeepSeek, GLM, Ollama, vLLM 等)
-• Anthropic 格式 (base_url 包含 "anthropic")
+使用 Anthropic API (Haiku) 进行压缩。
 """)
 
     choice = get_input("启用消息压缩? (y/N)", "n").lower()
@@ -103,11 +101,11 @@ def setup_compression():
     # Get custom endpoint configuration
     print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
 
-    base_url = get_input("Base URL (如 https://api.deepseek.com)")
-    model = get_input("Model 名称 (如 deepseek-chat)")
+    base_url = get_input("Base URL", "https://api.anthropic.com")
+    model = get_input("Model", "claude-3-haiku-20240307")
 
-    print(f"\n{YELLOW}API Key 支持环境变量格式，如 $DEEPSEEK_API_KEY{RESET}")
-    api_key = get_input("API Key (无需则留空)", "")
+    print(f"\n{YELLOW}支持环境变量格式，如 $ANTHROPIC_API_KEY{RESET}")
+    api_key = get_input("API Key", "$ANTHROPIC_API_KEY")
 
     # Save config
     config = {

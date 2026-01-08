@@ -1,4 +1,4 @@
-# GAAP - Get Alerted by A Pigeon
+# GAAP - Get Alerted by A Pigeon (鴿)
 
 <p align="center">
   <img src="logo.svg" width="128" height="128" alt="GAAP Logo">
@@ -79,14 +79,12 @@ Run `/gaap:setup` or create `~/.claude/gaap.json`:
 {
   "message_format": "compressed",
   "compress": {
-    "base_url": "https://api.deepseek.com",
-    "model": "deepseek-chat",
-    "api_key": "$DEEPSEEK_API_KEY"
+    "base_url": "https://api.anthropic.com",
+    "model": "claude-3-haiku-20240307",
+    "api_key": "$ANTHROPIC_API_KEY"
   }
 }
 ```
-
-Supports any OpenAI-compatible API (DeepSeek, GLM, Ollama, vLLM, etc.) or Anthropic API.
 
 API key supports `$ENV_VAR` format. Compression failure auto-falls back to full message.
 
