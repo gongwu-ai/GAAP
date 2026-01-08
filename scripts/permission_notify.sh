@@ -16,8 +16,11 @@ WEBHOOK_URL=""
 
 [ -z "$WEBHOOK_URL" ] && exit 0
 
+# Get hostname
+HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
+
 # Extract tool name and session name
-TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "Unknown")
+TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "?")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
 
@@ -26,10 +29,10 @@ SESSION_NAME=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     SESSION_NAME=$(head -1 "$TRANSCRIPT_PATH" | grep -o '"summary":"[^"]*"' | sed 's/"summary":"//;s/"$//' | head -c 30 || true)
 fi
-[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
+[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
 
 # Send notification
-MESSAGE="[$SESSION_NAME] 请求权限: $TOOL_NAME"
+MESSAGE="[$HOST|$SESSION_NAME] 权限: $TOOL_NAME"
 curl -s -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
     -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$MESSAGE\"}}" \

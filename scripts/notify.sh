@@ -27,12 +27,15 @@ PERMISSION_MODE=$(echo "$input" | grep -o '"permission_mode":"[^"]*"' | sed 's/"
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
 
+# Get hostname (short form)
+HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
+
 # Extract session name from transcript (first summary line)
 SESSION_NAME=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     SESSION_NAME=$(head -1 "$TRANSCRIPT_PATH" | grep -o '"summary":"[^"]*"' | sed 's/"summary":"//;s/"$//' | head -c 30 || true)
 fi
-[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
+[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
 
 # Check auto-approve mode
 AUTO_APPROVE=false
@@ -69,9 +72,9 @@ if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
         # Try to compress message using LLM (fallback to original)
         COMPRESSED=$(echo "$LAST_CONTENT" | python3 "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
-        MESSAGE="[$SESSION_NAME] $COMPRESSED"
+        MESSAGE="[$HOST|$SESSION_NAME] $COMPRESSED"
     else
-        MESSAGE="[$SESSION_NAME] Claude Code 等待输入"
+        MESSAGE="[$HOST|$SESSION_NAME] 等待输入"
     fi
 
     # Escape special chars for JSON
