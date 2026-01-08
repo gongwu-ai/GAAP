@@ -88,6 +88,8 @@ Run `/gaap:setup` or create `~/.claude/gaap.json`:
 }
 ```
 
+Works with any Anthropic-compatible API. Get your API key from your provider.
+
 API key supports `$ENV_VAR` format. Compression failure auto-falls back to full message.
 
 ## Update
