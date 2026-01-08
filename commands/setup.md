@@ -12,9 +12,15 @@ Ask the user for their Feishu webhook URL. They can get this by:
 1. Creating a custom bot in their Feishu group
 2. Copying the webhook URL (format: `https://open.feishu.cn/open-apis/bot/v2/hook/xxx`)
 
-Save it to the project's `.env` file:
-```bash
-echo "FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx" >> .env
+Save it to the project's `.env` file. **IMPORTANT**:
+- First Read `.env` to check existing content
+- If `FEISHU_WEBHOOK_URL` exists, use Edit to update it
+- If not, append the new line (preserve existing content!)
+- Never overwrite or duplicate existing keys
+
+Example (if .env doesn't exist or key is missing):
+```
+FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 ```
 
 Note: `.env` is typically auto-ignored by git and many IDEs.
@@ -29,9 +35,9 @@ If yes, ask for:
 - **api_key**: API key from their provider
 - **lang**: Output language - `zh` (中文) or `en` (English)
 
-Save the API key to `.env`:
-```bash
-echo "GAAP_API_KEY=sk-xxx" >> .env
+Save the API key to `.env` (same merge logic as Step 1 - update if exists, append if not):
+```
+GAAP_API_KEY=sk-xxx
 ```
 
 Save config to `.claude/gaap.json` (references the env var):
