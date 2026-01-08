@@ -46,14 +46,10 @@ chmod 600 .claude/feishu-webhook-url
 
 ## Configuration
 
-Config files are stored in `.claude/` directory of your project:
-
 | File | Purpose |
 |------|---------|
-| `.claude/feishu-webhook-url` | Webhook URL |
-| `.claude/gaap.json` | Compression settings |
-
-Environment variable `$FEISHU_WEBHOOK_URL` overrides file config.
+| `.env` | `FEISHU_WEBHOOK_URL`, `GAAP_API_KEY` (auto-ignored by git) |
+| `.claude/gaap.json` | Compression settings (base_url, model, lang) |
 
 ## How It Works
 

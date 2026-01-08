@@ -6,11 +6,12 @@ GAAP Setup - Interactive configuration wizard
 import os
 import sys
 import json
+import re
 
-# Project-level config (in current working directory)
+# Project-level config
+ENV_PATH = ".env"
 CONFIG_DIR = ".claude"
 CONFIG_PATH = os.path.join(CONFIG_DIR, "gaap.json")
-WEBHOOK_PATH = os.path.join(CONFIG_DIR, "feishu-webhook-url")
 
 # ANSI colors
 BOLD = "\033[1m"
@@ -19,7 +20,6 @@ YELLOW = "\033[33m"
 CYAN = "\033[36m"
 RED = "\033[31m"
 RESET = "\033[0m"
-
 
 
 def clear_screen():
@@ -49,6 +49,47 @@ def get_input(prompt, default=None):
     return input(f"{prompt}: ").strip()
 
 
+def load_env():
+    """Load existing .env file as dict"""
+    env = {}
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    env[key.strip()] = value.strip().strip('"\'')
+    return env
+
+
+def save_env(env):
+    """Save dict to .env file, preserving comments"""
+    lines = []
+    existing_keys = set()
+
+    # Read existing file to preserve comments and order
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, 'r') as f:
+            for line in f:
+                if line.strip().startswith('#') or not line.strip():
+                    lines.append(line.rstrip())
+                elif '=' in line:
+                    key = line.split('=', 1)[0].strip()
+                    existing_keys.add(key)
+                    if key in env:
+                        lines.append(f'{key}={env[key]}')
+                    else:
+                        lines.append(line.rstrip())
+
+    # Add new keys
+    for key, value in env.items():
+        if key not in existing_keys:
+            lines.append(f'{key}={value}')
+
+    with open(ENV_PATH, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
 def setup_webhook():
     print_step(1, 3, "配置飞书 Webhook")
 
@@ -60,20 +101,17 @@ def setup_webhook():
 4. 复制 Webhook 地址
 """)
 
-    current = ""
-    if os.path.exists(WEBHOOK_PATH):
-        with open(WEBHOOK_PATH) as f:
-            current = f.read().strip()
+    env = load_env()
+    current = env.get("FEISHU_WEBHOOK_URL", "")
+    if current:
         print(f"当前配置: {GREEN}{current[:50]}...{RESET}\n")
 
     webhook = get_input("Webhook URL", current if current else None)
 
     if webhook and webhook.startswith("http"):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        with open(WEBHOOK_PATH, 'w') as f:
-            f.write(webhook)
-        os.chmod(WEBHOOK_PATH, 0o600)
-        print(f"\n{GREEN}✓ Webhook 已保存{RESET}")
+        env["FEISHU_WEBHOOK_URL"] = webhook
+        save_env(env)
+        print(f"\n{GREEN}✓ Webhook 已保存到 .env{RESET}")
         return True
     else:
         print(f"\n{RED}✗ 无效的 URL{RESET}")
@@ -93,7 +131,6 @@ def load_config():
 def setup_compression():
     print_step(2, 3, "配置消息压缩 (可选)")
 
-    # Load existing config
     existing = load_config()
     compress_cfg = existing.get("compress", {})
     is_compressed = existing.get("message_format") == "compressed"
@@ -102,8 +139,6 @@ def setup_compression():
 {YELLOW}消息压缩功能:{RESET}
 飞书不渲染 Markdown，使用 LLM 将消息压缩成口语化格式。
 压缩失败会自动回退到全量发送。
-
-使用 Anthropic API (Haiku) 进行压缩。
 """)
 
     default_enable = "y" if is_compressed else "n"
@@ -115,14 +150,30 @@ def setup_compression():
         print(f"\n{GREEN}✓ 将发送全量消息{RESET}")
         return True
 
-    # Get custom endpoint configuration with existing values as defaults
     print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
 
     base_url = get_input("Base URL", compress_cfg.get("base_url", "https://api.anthropic.com"))
     model = get_input("Model", compress_cfg.get("model", "claude-3-haiku-20240307"))
 
-    print(f"\n{YELLOW}支持环境变量格式，如 $ANTHROPIC_API_KEY{RESET}")
-    api_key = get_input("API Key", compress_cfg.get("api_key", "$ANTHROPIC_API_KEY"))
+    print(f"\n{YELLOW}API Key 会保存到 .env 文件{RESET}")
+
+    # Load existing key from env
+    env = load_env()
+    existing_key = env.get("GAAP_API_KEY", "")
+    if existing_key:
+        # Show masked key
+        masked = existing_key[:8] + "..." + existing_key[-4:] if len(existing_key) > 12 else "***"
+        api_key = get_input(f"API Key (当前: {masked})", existing_key)
+    else:
+        api_key = get_input("API Key")
+
+    # Save API key to .env
+    if api_key and not api_key.startswith("$"):
+        env["GAAP_API_KEY"] = api_key
+        save_env(env)
+        api_key_ref = "$GAAP_API_KEY"
+    else:
+        api_key_ref = api_key if api_key else "$GAAP_API_KEY"
 
     existing_lang = compress_cfg.get("lang", "zh")
     print(f"\n{BOLD}压缩语言:{RESET}")
@@ -132,13 +183,12 @@ def setup_compression():
     lang_choice = get_input("\n选择", default_lang)
     lang = "en" if lang_choice == "2" else "zh"
 
-    # Save config
     config = {
         "message_format": "compressed",
         "compress": {
             "base_url": base_url,
             "model": model,
-            "api_key": api_key,
+            "api_key": api_key_ref,
             "lang": lang
         }
     }
@@ -155,7 +205,6 @@ def save_config(config):
     os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CONFIG_PATH, 'w') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
-    os.chmod(CONFIG_PATH, 0o600)
 
 
 def show_summary():
@@ -166,9 +215,11 @@ def show_summary():
 ║  ✓ GAAP 配置成功!                                        ║
 ╚══════════════════════════════════════════════════════════╝{RESET}
 
-{BOLD}配置文件 (项目级):{RESET}
-  • Webhook: {CYAN}.claude/feishu-webhook-url{RESET}
-  • 设置:    {CYAN}.claude/gaap.json{RESET}
+{BOLD}配置文件:{RESET}
+  • {CYAN}.env{RESET} - FEISHU_WEBHOOK_URL, GAAP_API_KEY
+  • {CYAN}.claude/gaap.json{RESET} - 压缩设置
+
+{YELLOW}提示: .env 通常已在 .gitignore 中{RESET}
 
 {BOLD}测试通知:{RESET}
   重启 Claude Code，然后让 Claude 问你一个问题。

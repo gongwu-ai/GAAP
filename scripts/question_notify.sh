@@ -8,7 +8,10 @@ read -r input || true
 # Parse project directory from hook input
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
 
-# Find webhook URL (env var > project config)
+# Load .env if exists
+[ -n "$CWD" ] && [ -f "$CWD/.env" ] && set -a && . "$CWD/.env" && set +a
+
+# Find webhook URL (env var > file fallback)
 WEBHOOK_URL=""
 [ -n "$FEISHU_WEBHOOK_URL" ] && WEBHOOK_URL="$FEISHU_WEBHOOK_URL"
 [ -z "$WEBHOOK_URL" ] && [ -n "$CWD" ] && [ -f "$CWD/.claude/feishu-webhook-url" ] && \
