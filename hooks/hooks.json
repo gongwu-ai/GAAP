@@ -23,6 +23,18 @@
           }
         ]
       }
+    ],
+    "AskUserQuestion": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/question_notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
