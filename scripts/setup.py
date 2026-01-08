@@ -7,7 +7,8 @@ import os
 import sys
 import json
 
-CONFIG_DIR = os.path.expanduser("~/.claude")
+# Project-level config (in current working directory)
+CONFIG_DIR = ".claude"
 CONFIG_PATH = os.path.join(CONFIG_DIR, "gaap.json")
 WEBHOOK_PATH = os.path.join(CONFIG_DIR, "feishu-webhook-url")
 
@@ -165,9 +166,9 @@ def show_summary():
 ║  ✓ GAAP 配置成功!                                        ║
 ╚══════════════════════════════════════════════════════════╝{RESET}
 
-{BOLD}配置文件:{RESET}
-  • Webhook: {CYAN}~/.claude/feishu-webhook-url{RESET}
-  • 设置:    {CYAN}~/.claude/gaap.json{RESET}
+{BOLD}配置文件 (项目级):{RESET}
+  • Webhook: {CYAN}.claude/feishu-webhook-url{RESET}
+  • 设置:    {CYAN}.claude/gaap.json{RESET}
 
 {BOLD}测试通知:{RESET}
   重启 Claude Code，然后让 Claude 问你一个问题。

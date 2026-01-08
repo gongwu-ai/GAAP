@@ -9,7 +9,9 @@ import os
 import urllib.request
 import urllib.error
 
-CONFIG_PATH = os.path.expanduser("~/.claude/gaap.json")
+# Project-level config (via GAAP_PROJECT_DIR env var)
+PROJECT_DIR = os.environ.get("GAAP_PROJECT_DIR", ".")
+CONFIG_PATH = os.path.join(PROJECT_DIR, ".claude/gaap.json")
 
 PROMPTS = {
     "zh": "将消息压缩成简短口语化的中文，去除所有Markdown格式。保留核心信息，最多100字。只输出压缩结果。",

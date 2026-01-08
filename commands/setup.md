@@ -12,11 +12,11 @@ Ask the user for their Feishu webhook URL. They can get this by:
 1. Creating a custom bot in their Feishu group
 2. Copying the webhook URL (format: `https://open.feishu.cn/open-apis/bot/v2/hook/xxx`)
 
-Save it to `~/.claude/feishu-webhook-url`:
+Save it to the project's `.claude/feishu-webhook-url`:
 ```bash
-mkdir -p ~/.claude
-echo "WEBHOOK_URL" > ~/.claude/feishu-webhook-url
-chmod 600 ~/.claude/feishu-webhook-url
+mkdir -p .claude
+echo "WEBHOOK_URL" > .claude/feishu-webhook-url
+chmod 600 .claude/feishu-webhook-url
 ```
 
 ## Step 2: Message Compression (Optional)
@@ -29,7 +29,7 @@ If yes, ask for:
 - **api_key**: API key (supports `$ENV_VAR` format, e.g. `$ANTHROPIC_API_KEY`)
 - **lang**: Output language - `zh` (中文) or `en` (English)
 
-Save config to `~/.claude/gaap.json`:
+Save config to `.claude/gaap.json`:
 ```json
 {
   "message_format": "compressed",
@@ -53,7 +53,7 @@ If they don't want compression, save:
 
 Send a test notification:
 ```bash
-curl -s -X POST "$(cat ~/.claude/feishu-webhook-url)" \
+curl -s -X POST "$(cat .claude/feishu-webhook-url)" \
   -H "Content-Type: application/json" \
   -d '{"msg_type":"text","content":{"text":"GAAP test - setup complete!"}}'
 ```

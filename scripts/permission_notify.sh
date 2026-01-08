@@ -8,11 +8,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 read -r input || true
 
-# Find webhook URL
+# Parse project directory from hook input
+CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
+
+# Find webhook URL (env var > project config)
 WEBHOOK_URL=""
 [ -n "$FEISHU_WEBHOOK_URL" ] && WEBHOOK_URL="$FEISHU_WEBHOOK_URL"
-[ -z "$WEBHOOK_URL" ] && [ -f "$HOME/.claude/feishu-webhook-url" ] && \
-    WEBHOOK_URL=$(cat "$HOME/.claude/feishu-webhook-url" 2>/dev/null | tr -d '\n')
+[ -z "$WEBHOOK_URL" ] && [ -n "$CWD" ] && [ -f "$CWD/.claude/feishu-webhook-url" ] && \
+    WEBHOOK_URL=$(cat "$CWD/.claude/feishu-webhook-url" 2>/dev/null | tr -d '\n')
 
 [ -z "$WEBHOOK_URL" ] && exit 0
 
@@ -22,7 +25,6 @@ HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 # Extract tool name and session name
 TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "?")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
-CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
 
 # Extract session name from transcript
 SESSION_NAME=""
