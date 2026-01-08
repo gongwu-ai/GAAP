@@ -3,6 +3,10 @@
 # GAAP - AskUserQuestion Notification (Project-level)
 ###############################################################################
 
+# Debug log (for troubleshooting hook execution)
+DEBUG_LOG="${TMPDIR:-/tmp}/gaap_debug.log"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] AskUserQuestion hook triggered. CLAUDE_PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-not_set}" >> "$DEBUG_LOG"
+
 read -r input || true
 
 # Parse project directory from hook input

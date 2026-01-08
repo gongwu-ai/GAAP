@@ -92,6 +92,32 @@ claude plugin uninstall gaap@gaap
 rm .claude/feishu-webhook-url .claude/gaap.json
 ```
 
+## Troubleshooting
+
+**Hooks not triggering?**
+
+Check debug log:
+```bash
+cat /tmp/gaap_debug.log
+```
+
+If empty, hooks aren't being called. Verify:
+```bash
+# Check plugin is enabled
+cat ~/.claude/settings.json | grep gaap
+
+# Check hooks file exists
+ls ~/.claude/plugins/cache/gaap/gaap/*/hooks/hooks.json
+
+# Check scripts are executable
+chmod +x ~/.claude/plugins/cache/gaap/gaap/*/scripts/*.sh
+```
+
+**Manual test:**
+```bash
+echo '{"cwd":"'"$(pwd)"'"}' | ~/.claude/plugins/cache/gaap/gaap/*/scripts/question_notify.sh
+```
+
 ## License
 
 MIT
