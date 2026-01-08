@@ -69,6 +69,36 @@ When Claude Code finishes responding, the plugin:
 
 This means you won't be spammed with notifications for every response.
 
+## Message Compression (Optional)
+
+Feishu doesn't render Markdown. Enable LLM compression for cleaner messages:
+
+Create `~/.claude/gaap.json`:
+
+```json
+{
+  "message_format": "compressed",
+  "compress": {
+    "provider": "openai",
+    "model": "deepseek-chat",
+    "api_key": "sk-xxx",
+    "base_url": "https://api.deepseek.com/v1"
+  }
+}
+```
+
+### Supported Providers
+
+| Provider | base_url | Model |
+|----------|----------|-------|
+| Anthropic | (default) | claude-3-haiku-20240307 |
+| DeepSeek | https://api.deepseek.com/v1 | deepseek-chat |
+| GLM | https://open.bigmodel.cn/api/paas/v4 | glm-4-flash |
+| OpenAI | https://api.openai.com/v1 | gpt-4o-mini |
+| Ollama | http://localhost:11434/v1 | llama3.2 |
+
+If compression fails, the plugin automatically falls back to sending the full message.
+
 ## Uninstall
 
 ```bash

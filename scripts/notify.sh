@@ -67,7 +67,9 @@ fi
 # Send notification
 if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
-        MESSAGE="[$SESSION_NAME] $LAST_CONTENT"
+        # Try to compress message using LLM (fallback to original)
+        COMPRESSED=$(echo "$LAST_CONTENT" | python3 "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
+        MESSAGE="[$SESSION_NAME] $COMPRESSED"
     else
         MESSAGE="[$SESSION_NAME] Claude Code 等待输入"
     fi
