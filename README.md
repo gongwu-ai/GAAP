@@ -33,13 +33,12 @@ Then restart Claude Code.
 
 ## Setup
 
-Run the setup wizard:
+Run `/gaap:setup` in Claude Code, or use the fallback:
 
 ```bash
-# If installed via plugin
+# Fallback (if /gaap:setup doesn't work)
 python3 ~/.claude/plugins/marketplaces/gaap/scripts/setup.py
-
-# If installed via fallback
+# or
 python3 ~/.gaap/scripts/setup.py
 ```
 
@@ -78,7 +77,7 @@ This means you won't be spammed with notifications for every response.
 
 Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
 
-Run the setup wizard or create `~/.claude/gaap.json`:
+Run `/gaap:setup` or create `~/.claude/gaap.json`:
 
 ```json
 {
