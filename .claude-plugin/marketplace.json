@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "gaap",
-      "source": ".",
+      "source": "./",
       "description": "Feishu/Lark notifications for Claude Code - Get notified when Claude needs your input (鴿)",
       "version": "1.0.0",
       "author": {
