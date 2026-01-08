@@ -16,6 +16,16 @@ Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude n
 ## Installation
 
 ```bash
+# TMPDIR workaround for Linux (https://github.com/anthropics/claude-code/issues/14799)
+mkdir -p ~/.claude/tmp && export TMPDIR=~/.claude/tmp
+
+# Add marketplace and install
+claude plugin marketplace add gongwu-ai/GAAP
+claude plugin install gaap@gaap
+```
+
+**Fallback** (if plugin install fails):
+```bash
 curl -fsSL https://raw.githubusercontent.com/gongwu-ai/GAAP/main/install.sh | bash
 ```
 
@@ -26,7 +36,11 @@ Then restart Claude Code.
 Run the setup wizard:
 
 ```bash
-python3 ~/projects/GAAP/scripts/setup.py
+# If installed via plugin
+python3 ~/.claude/plugins/marketplaces/gaap/scripts/setup.py
+
+# If installed via fallback
+python3 ~/.gaap/scripts/setup.py
 ```
 
 Or manually configure:
@@ -64,7 +78,7 @@ This means you won't be spammed with notifications for every response.
 
 Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
 
-Run `python3 ~/projects/GAAP/scripts/setup.py` or create `~/.claude/gaap.json`:
+Run the setup wizard or create `~/.claude/gaap.json`:
 
 ```json
 {
@@ -83,21 +97,27 @@ API key supports `$ENV_VAR` format. Compression failure auto-falls back to full 
 
 ## Update
 
-For local installations:
-
 ```bash
-cd ~/projects/GAAP && git pull
-# Restart Claude Code to apply changes
+# If installed via plugin
+claude plugin update gaap@gaap
+
+# If installed via fallback
+cd ~/.gaap && git pull
 ```
+
+Restart Claude Code to apply changes.
 
 ## Uninstall
 
-Remove hooks from `~/.claude/settings.json`, then:
-
 ```bash
-rm -rf ~/projects/GAAP
-rm ~/.claude/feishu-webhook-url
-rm ~/.claude/gaap.json
+# If installed via plugin
+claude plugin uninstall gaap@gaap
+
+# If installed via fallback (also remove hooks from ~/.claude/settings.json)
+rm -rf ~/.gaap
+
+# Clean up config
+rm ~/.claude/feishu-webhook-url ~/.claude/gaap.json
 ```
 
 ## License
