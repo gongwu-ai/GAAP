@@ -6,7 +6,6 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Read hook input
 read -r input || true
 
 # Find webhook URL
@@ -15,7 +14,6 @@ WEBHOOK_URL=""
 [ -z "$WEBHOOK_URL" ] && [ -f "$HOME/.claude/feishu-webhook-url" ] && \
     WEBHOOK_URL=$(cat "$HOME/.claude/feishu-webhook-url" 2>/dev/null | tr -d '\n')
 
-# Try project config
 if [ -z "$WEBHOOK_URL" ]; then
     PROJECT_DIR=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
     [ -n "$PROJECT_DIR" ] && [ -f "$PROJECT_DIR/.claude/.feishu-webhook-url" ] && \
@@ -28,7 +26,13 @@ fi
 PERMISSION_MODE=$(echo "$input" | grep -o '"permission_mode":"[^"]*"' | sed 's/"permission_mode":"//;s/"$//' || echo "default")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
-SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
+
+# Extract session name from transcript (first summary line)
+SESSION_NAME=""
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+    SESSION_NAME=$(head -1 "$TRANSCRIPT_PATH" | grep -o '"summary":"[^"]*"' | sed 's/"summary":"//;s/"$//' | head -c 30 || true)
+fi
+[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
 
 # Check auto-approve mode
 AUTO_APPROVE=false
@@ -63,11 +67,13 @@ fi
 # Send notification
 if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
-        SUMMARY=$(echo "$LAST_CONTENT" | tail -c 60 | tr '\n' ' ')
-        MESSAGE="[$SESSION_NAME] $SUMMARY"
+        MESSAGE="[$SESSION_NAME] $LAST_CONTENT"
     else
         MESSAGE="[$SESSION_NAME] Claude Code 等待输入"
     fi
+
+    # Escape special chars for JSON
+    MESSAGE=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
 
     for i in 1 2 3; do
         HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \

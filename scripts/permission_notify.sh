@@ -18,8 +18,15 @@ WEBHOOK_URL=""
 
 # Extract tool name and session name
 TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "Unknown")
+TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
-SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
+
+# Extract session name from transcript
+SESSION_NAME=""
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+    SESSION_NAME=$(head -1 "$TRANSCRIPT_PATH" | grep -o '"summary":"[^"]*"' | sed 's/"summary":"//;s/"$//' | head -c 30 || true)
+fi
+[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
 
 # Send notification
 MESSAGE="[$SESSION_NAME] 请求权限: $TOOL_NAME"
