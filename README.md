@@ -16,19 +16,10 @@ Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude n
 ## Installation
 
 ```bash
-git clone https://github.com/gongwu-ai/GAAP.git ~/projects/GAAP
+curl -fsSL https://raw.githubusercontent.com/gongwu-ai/GAAP/main/install.sh | bash
 ```
 
-Then add hooks to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Stop": [{"hooks": [{"type": "command", "command": "~/projects/GAAP/scripts/notify.sh"}]}],
-    "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "~/projects/GAAP/scripts/permission_notify.sh"}]}]
-  }
-}
-```
+Then restart Claude Code.
 
 ## Setup
 
