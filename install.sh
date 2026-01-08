@@ -11,7 +11,28 @@ SETTINGS_FILE="$HOME/.claude/settings.json"
 
 echo "Installing GAAP..."
 
-# Clone or update
+# Workaround for EXDEV bug (https://github.com/anthropics/claude-code/issues/14799)
+mkdir -p "$HOME/.claude/tmp"
+export TMPDIR="$HOME/.claude/tmp"
+
+# Try official plugin install first
+if command -v claude &> /dev/null; then
+    echo "Trying official plugin install..."
+    claude plugin marketplace add gongwu-ai/GAAP 2>/dev/null || true
+    if claude plugin install gaap@gaap 2>/dev/null; then
+        echo ""
+        echo "✓ GAAP installed via plugin system!"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Run: claude  (then /gaap:setup)"
+        echo "  2. Or run: python3 ~/.claude/plugins/marketplaces/gaap/scripts/setup.py"
+        echo ""
+        exit 0
+    fi
+    echo "Plugin install failed, falling back to hooks method..."
+fi
+
+# Fallback: clone and configure hooks
 if [ -d "$INSTALL_DIR" ]; then
     echo "Updating existing installation..."
     cd "$INSTALL_DIR" && git pull
@@ -20,19 +41,13 @@ else
     git clone "$REPO" "$INSTALL_DIR"
 fi
 
-# Ensure .claude directory exists
 mkdir -p "$HOME/.claude"
 
-# Merge hooks into settings.json
 if [ -f "$SETTINGS_FILE" ]; then
-    # Backup existing settings
     cp "$SETTINGS_FILE" "$SETTINGS_FILE.bak"
-
-    # Check if hooks already configured
     if grep -q "notify.sh" "$SETTINGS_FILE" 2>/dev/null; then
-        echo "Hooks already configured, skipping..."
+        echo "Hooks already configured."
     else
-        # Use python to merge JSON (more reliable than jq)
         python3 << 'PYTHON'
 import json
 import os
@@ -54,7 +69,6 @@ PYTHON
         echo "Hooks configured."
     fi
 else
-    # Create new settings.json
     cat > "$SETTINGS_FILE" << EOF
 {
   "hooks": {
@@ -63,7 +77,7 @@ else
   }
 }
 EOF
-    echo "Created settings.json with hooks."
+    echo "Created settings.json."
 fi
 
 echo ""
