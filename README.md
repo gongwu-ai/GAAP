@@ -16,12 +16,12 @@ Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude n
 ## Installation
 
 ```bash
-# TMPDIR workaround for Linux (https://github.com/anthropics/claude-code/issues/14799)
-mkdir -p ~/.claude/tmp && export TMPDIR=~/.claude/tmp
-
-# Add marketplace and install
+# Add marketplace
 claude plugin marketplace add gongwu-ai/GAAP
-claude plugin install gaap@gaap
+
+# Install (with TMPDIR workaround for Linux, see issue #14799)
+mkdir -p ~/.claude/tmp
+TMPDIR=~/.claude/tmp claude plugin install gaap@gaap
 ```
 
 **Fallback** (if plugin install fails):
