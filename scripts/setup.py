@@ -107,13 +107,20 @@ def setup_compression():
     print(f"\n{YELLOW}支持环境变量格式，如 $ANTHROPIC_API_KEY{RESET}")
     api_key = get_input("API Key", "$ANTHROPIC_API_KEY")
 
+    print(f"\n{BOLD}压缩语言:{RESET}")
+    print(f"  {CYAN}1{RESET}. 中文 (zh)")
+    print(f"  {CYAN}2{RESET}. English (en)")
+    lang_choice = get_input("\n选择", "1")
+    lang = "en" if lang_choice == "2" else "zh"
+
     # Save config
     config = {
         "message_format": "compressed",
         "compress": {
             "base_url": base_url,
             "model": model,
-            "api_key": api_key
+            "api_key": api_key,
+            "lang": lang
         }
     }
     save_config(config)
@@ -121,6 +128,7 @@ def setup_compression():
     print(f"\n{GREEN}✓ 压缩配置已保存{RESET}")
     print(f"  Base URL: {base_url}")
     print(f"  Model: {model}")
+    print(f"  Language: {'中文' if lang == 'zh' else 'English'}")
     return True
 
 

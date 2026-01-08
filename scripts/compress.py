@@ -11,7 +11,10 @@ import urllib.error
 
 CONFIG_PATH = os.path.expanduser("~/.claude/gaap.json")
 
-SYSTEM_PROMPT = """将消息压缩成简短口语化的中文，去除所有Markdown格式。保留核心信息，最多100字。只输出压缩结果。"""
+PROMPTS = {
+    "zh": "将消息压缩成简短口语化的中文，去除所有Markdown格式。保留核心信息，最多100字。只输出压缩结果。",
+    "en": "Compress the message into concise conversational English. Remove all Markdown formatting. Keep core info only, max 50 words. Output only the result."
+}
 
 
 def load_config():
@@ -33,7 +36,7 @@ def resolve_api_key(key_str):
     return key_str
 
 
-def call_anthropic(base_url, api_key, model, message):
+def call_anthropic(base_url, api_key, model, message, lang="zh"):
     """Call Anthropic API"""
     url = f"{base_url}/v1/messages"
     headers = {
@@ -44,7 +47,7 @@ def call_anthropic(base_url, api_key, model, message):
     data = {
         "model": model,
         "max_tokens": 200,
-        "system": SYSTEM_PROMPT,
+        "system": PROMPTS.get(lang, PROMPTS["zh"]),
         "messages": [{"role": "user", "content": message}]
     }
 
@@ -64,12 +67,13 @@ def compress(message):
     base_url = compress_cfg.get("base_url", "https://api.anthropic.com").rstrip("/")
     model = compress_cfg.get("model", "claude-3-haiku-20240307")
     api_key = resolve_api_key(compress_cfg.get("api_key"))
+    lang = compress_cfg.get("lang", "zh")
 
     if not api_key:
         return None
 
     try:
-        return call_anthropic(base_url, api_key, model, message)
+        return call_anthropic(base_url, api_key, model, message, lang)
     except:
         return None
 
