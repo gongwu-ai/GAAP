@@ -88,11 +88,21 @@ Run `/gaap:setup` or create `~/.claude/gaap.json`:
 
 API key supports `$ENV_VAR` format. Compression failure auto-falls back to full message.
 
+## Update
+
+For local installations:
+
+```bash
+cd ~/projects/GAAP && git pull
+# Restart Claude Code to apply changes
+```
+
 ## Uninstall
 
 ```bash
 claude plugin uninstall gaap
 rm ~/.claude/feishu-webhook-url
+rm ~/.claude/gaap.json
 ```
 
 ## License
