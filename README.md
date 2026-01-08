@@ -15,29 +15,27 @@ Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude n
 
 ## Installation
 
-**Option 1: From GitHub (recommended)**
 ```bash
-claude plugin add github:gongwu-ai/GAAP
+git clone https://github.com/gongwu-ai/GAAP.git ~/projects/GAAP
 ```
 
-**Option 2: Via Marketplace**
-```bash
-/plugin marketplace add gongwu-ai/GAAP
-/plugin install gaap@gaap
-```
+Then add hooks to `~/.claude/settings.json`:
 
-**Option 3: Local install**
-```bash
-git clone https://github.com/gongwu-ai/GAAP.git
-claude plugin install ./GAAP
+```json
+{
+  "hooks": {
+    "Stop": [{"hooks": [{"type": "command", "command": "~/projects/GAAP/scripts/notify.sh"}]}],
+    "PermissionRequest": [{"matcher": "", "hooks": [{"type": "command", "command": "~/projects/GAAP/scripts/permission_notify.sh"}]}]
+  }
+}
 ```
 
 ## Setup
 
 Run the setup wizard:
 
-```
-/gaap:setup
+```bash
+python3 ~/projects/GAAP/scripts/setup.py
 ```
 
 Or manually configure:
@@ -75,7 +73,7 @@ This means you won't be spammed with notifications for every response.
 
 Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
 
-Run `/gaap:setup` or create `~/.claude/gaap.json`:
+Run `python3 ~/projects/GAAP/scripts/setup.py` or create `~/.claude/gaap.json`:
 
 ```json
 {
@@ -103,8 +101,10 @@ cd ~/projects/GAAP && git pull
 
 ## Uninstall
 
+Remove hooks from `~/.claude/settings.json`, then:
+
 ```bash
-claude plugin uninstall gaap
+rm -rf ~/projects/GAAP
 rm ~/.claude/feishu-webhook-url
 rm ~/.claude/gaap.json
 ```
