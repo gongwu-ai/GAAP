@@ -1,0 +1,15 @@
+{
+  "name": "gaap",
+  "version": "1.0.0",
+  "description": "Feishu/Lark notifications for Claude Code - Get notified when Claude needs your input",
+  "author": {
+    "name": "gongwu-ai",
+    "url": "https://github.com/gongwu-ai"
+  },
+  "homepage": "https://github.com/gongwu-ai/GAAP",
+  "repository": "https://github.com/gongwu-ai/GAAP",
+  "license": "MIT",
+  "keywords": ["feishu", "lark", "notification", "webhook", "chinese"],
+  "commands": ["./commands/setup.md"],
+  "hooks": "./hooks/hooks.json"
+}

@@ -1,0 +1,81 @@
+# GAAP - Get Alerted by A Pigeon
+
+<p align="center">
+  <img src="logo.svg" width="128" height="128" alt="GAAP Logo">
+</p>
+
+Smart Feishu/Lark notifications for Claude Code. Get notified only when Claude needs your input.
+
+## Features
+
+- **Smart notifications**: Only alerts when Claude asks a question or needs confirmation
+- **Cross-platform**: Works on Linux, macOS, and WSL
+- **Flexible config**: User-scope, project-scope, or environment variable
+- **Non-blocking**: Notification failures never interrupt Claude Code
+
+## Installation
+
+```bash
+# Add the marketplace
+claude marketplace add github gongwu-ai/GAAP
+
+# Install the plugin
+claude plugin install gaap
+```
+
+Or install from local directory:
+
+```bash
+git clone https://github.com/gongwu-ai/GAAP.git
+claude plugin install ./GAAP
+```
+
+## Setup
+
+Run the setup wizard:
+
+```
+/gaap:setup
+```
+
+Or manually configure:
+
+1. Create a custom bot in your Feishu group
+2. Copy the webhook URL
+3. Store it:
+
+```bash
+mkdir -p ~/.claude
+echo "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_TOKEN" > ~/.claude/feishu-webhook-url
+chmod 600 ~/.claude/feishu-webhook-url
+```
+
+## Configuration Priority
+
+The plugin looks for webhook URL in this order:
+
+1. `$FEISHU_WEBHOOK_URL` environment variable
+2. `~/.claude/feishu-webhook-url` (user scope)
+3. `.claude/.feishu-webhook-url` in project root (project scope)
+4. `/etc/claude-code/feishu-webhook-url` (enterprise scope)
+
+## How It Works
+
+When Claude Code finishes responding, the plugin:
+
+1. Reads the last assistant message
+2. Checks if it contains question marks or request keywords
+3. Only sends notification if user input is needed
+
+This means you won't be spammed with notifications for every response.
+
+## Uninstall
+
+```bash
+claude plugin uninstall gaap
+rm ~/.claude/feishu-webhook-url
+```
+
+## License
+
+MIT

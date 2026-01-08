@@ -1,0 +1,28 @@
+{
+  "description": "GAAP - Smart Feishu notifications for Claude Code",
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/permission_notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

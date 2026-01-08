@@ -1,0 +1,17 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#1a1a1a" rx="20"/>
+
+  <!-- Pigeon body -->
+  <circle cx="100" cy="110" r="35" fill="#ffffff"/>
+
+  <!-- Pigeon head -->
+  <circle cx="100" cy="75" r="20" fill="#ffffff"/>
+
+  <!-- Beak -->
+  <polygon points="100,78 90,92 100,88" fill="#000000"/>
+
+  <!-- Wings -->
+  <ellipse cx="70" cy="110" rx="20" ry="30" fill="#e0e0e0"/>
+  <ellipse cx="130" cy="110" rx="20" ry="30" fill="#e0e0e0"/>
+</svg>

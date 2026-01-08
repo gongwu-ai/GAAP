@@ -1,0 +1,31 @@
+#!/bin/bash
+###############################################################################
+# GAAP - Permission Request Notification
+# Sends notification when Claude requests permission for a tool
+###############################################################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+read -r input || true
+
+# Find webhook URL
+WEBHOOK_URL=""
+[ -n "$FEISHU_WEBHOOK_URL" ] && WEBHOOK_URL="$FEISHU_WEBHOOK_URL"
+[ -z "$WEBHOOK_URL" ] && [ -f "$HOME/.claude/feishu-webhook-url" ] && \
+    WEBHOOK_URL=$(cat "$HOME/.claude/feishu-webhook-url" 2>/dev/null | tr -d '\n')
+
+[ -z "$WEBHOOK_URL" ] && exit 0
+
+# Extract tool name and session name
+TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "Unknown")
+CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
+SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "unknown")
+
+# Send notification
+MESSAGE="[$SESSION_NAME] 请求权限: $TOOL_NAME"
+curl -s -X POST "$WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$MESSAGE\"}}" \
+    --connect-timeout 5 --max-time 10 > /dev/null 2>&1 || true
+
+exit 0
