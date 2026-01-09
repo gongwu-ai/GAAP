@@ -26,11 +26,30 @@ WEBHOOK_URL=""
 # Get hostname
 HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 
-# Extract session name
+# Extract session name from transcript (first meaningful user message)
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 SESSION_NAME=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    SESSION_NAME=$(head -1 "$TRANSCRIPT_PATH" | grep -o '"summary":"[^"]*"' | sed 's/"summary":"//;s/"$//' | head -c 30 || true)
+    SESSION_NAME=$(python3 << 'PYEOF'
+import json, re, sys
+try:
+    with open(sys.argv[1]) as f:
+        for line in f:
+            data = json.loads(line)
+            if data.get('type') == 'user':
+                content = data.get('message', {}).get('content', '')
+                # Skip commands and login messages
+                if any(x in content for x in ['<command-', '<local-command-', 'Login successful', '/login']):
+                    continue
+                # Clean HTML tags and get first meaningful text
+                text = re.sub(r'<[^>]+>', '', content).strip()
+                if len(text) > 10:  # Skip very short messages
+                    print(text[:30])
+                    break
+except:
+    pass
+PYEOF
+"$TRANSCRIPT_PATH" 2>/dev/null || true)
 fi
 [ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
 
