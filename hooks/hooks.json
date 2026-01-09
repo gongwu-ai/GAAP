@@ -15,6 +15,7 @@
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -24,13 +25,12 @@
         ]
       }
     ],
-    "AskUserQuestion": [
+    "Notification": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/question_notify.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh",
             "timeout": 10
           }
         ]

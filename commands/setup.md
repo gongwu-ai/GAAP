@@ -69,6 +69,22 @@ source .env && curl -s -X POST "$FEISHU_WEBHOOK_URL" \
   -d '{"msg_type":"text","content":{"text":"GAAP test - setup complete!"}}'
 ```
 
+## Step 4: Install Hooks (Required!)
+
+Due to a [Claude Code bug](https://github.com/anthropics/claude-code/issues/14410), plugin hooks don't execute automatically.
+
+Install hooks directly to the project:
+```bash
+python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
+# or for fallback install:
+python3 ~/.gaap/scripts/install_hooks.py
+```
+
+This writes hooks to `.claude/settings.json`. Verify with:
+```bash
+cat .claude/settings.json | grep -A5 hooks
+```
+
 ## Fallback
 
 If the interactive setup doesn't work, user can run:

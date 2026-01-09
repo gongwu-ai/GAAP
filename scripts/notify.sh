@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Debug log (for troubleshooting hook execution)
 DEBUG_LOG="${TMPDIR:-/tmp}/gaap_debug.log"
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stop hook triggered. CLAUDE_PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-not_set}" >> "$DEBUG_LOG"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] GAAP hook triggered (Stop/Notification). CLAUDE_PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-not_set}" >> "$DEBUG_LOG"
 
 read -r input || true
 

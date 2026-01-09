@@ -28,28 +28,36 @@ TMPDIR=~/.claude/tmp claude plugin install gaap@gaap --scope project
 curl -fsSL https://raw.githubusercontent.com/gongwu-ai/GAAP/main/install.sh | bash
 ```
 
-Then restart Claude Code.
-
 ## Setup
 
-Run `/gaap:setup` in Claude Code, or manually configure:
+Run `/gaap:setup` in Claude Code. It will guide you through:
+1. Feishu webhook URL configuration
+2. (Optional) Message compression using LLM
 
-1. Create a custom bot in your Feishu group
-2. Copy the webhook URL
-3. Store it in your project:
+## Known Issues & Workarounds
+
+### Plugin Hooks Not Executing
+
+Due to [Claude Code bug #14410](https://github.com/anthropics/claude-code/issues/14410), plugin hooks may not execute automatically.
+
+**Workaround**: Install hooks directly to your project:
 
 ```bash
-mkdir -p .claude
-echo "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_TOKEN" > .claude/feishu-webhook-url
-chmod 600 .claude/feishu-webhook-url
+# After plugin install, run this in your project directory
+python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
+# or for fallback install:
+python3 ~/.gaap/scripts/install_hooks.py
 ```
 
-## Configuration
+This writes hooks to your project's `.claude/settings.json`, bypassing the plugin system limitation.
+
+### Configuration
 
 | File | Purpose |
 |------|---------|
 | `.env` | `FEISHU_WEBHOOK_URL`, `GAAP_API_KEY` (auto-ignored by git) |
 | `.claude/gaap.json` | Compression settings (base_url, model, lang) |
+| `.claude/settings.json` | Hook configuration (via install_hooks.py) |
 
 ## How It Works
 
@@ -71,26 +79,13 @@ Run `/gaap:setup` or create `.claude/gaap.json`:
   "compress": {
     "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
-    "api_key": "$ANTHROPIC_API_KEY",
+    "api_key": "$GAAP_API_KEY",
     "lang": "zh"
   }
 }
 ```
 
-Works with any Anthropic-compatible API. Get your API key from your provider.
-
-## Update
-
-```bash
-claude plugin update gaap@gaap
-```
-
-## Uninstall
-
-```bash
-claude plugin uninstall gaap@gaap
-rm .claude/feishu-webhook-url .claude/gaap.json
-```
+Works with any Anthropic-compatible API.
 
 ## Troubleshooting
 
@@ -101,21 +96,33 @@ Check debug log:
 cat /tmp/gaap_debug.log
 ```
 
-If empty, hooks aren't being called. Verify:
+If empty, verify hooks are installed:
 ```bash
-# Check plugin is enabled
-cat ~/.claude/settings.json | grep gaap
+# Check project settings
+cat .claude/settings.json | grep -A5 hooks
 
-# Check hooks file exists
-ls ~/.claude/plugins/cache/gaap/gaap/*/hooks/hooks.json
-
-# Check scripts are executable
-chmod +x ~/.claude/plugins/cache/gaap/gaap/*/scripts/*.sh
+# Re-install hooks if needed
+python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
 ```
 
 **Manual test:**
 ```bash
-echo '{"cwd":"'"$(pwd)"'"}' | ~/.claude/plugins/cache/gaap/gaap/*/scripts/question_notify.sh
+echo '{"cwd":"'"$(pwd)"'"}' | ~/.claude/plugins/marketplaces/gaap/scripts/notify.sh
+```
+
+## Update
+
+```bash
+claude plugin update gaap@gaap
+python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py  # Re-install hooks
+```
+
+## Uninstall
+
+```bash
+claude plugin uninstall gaap@gaap
+rm .env .claude/gaap.json
+# Edit .claude/settings.json to remove GAAP hooks
 ```
 
 ## License
