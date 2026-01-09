@@ -33,31 +33,8 @@ TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"
 # Get hostname (short form)
 HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 
-# Extract session name from transcript (first meaningful user message)
-SESSION_NAME=""
-if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    SESSION_NAME=$(python3 << 'PYEOF'
-import json, re, sys
-try:
-    with open(sys.argv[1]) as f:
-        for line in f:
-            data = json.loads(line)
-            if data.get('type') == 'user':
-                content = data.get('message', {}).get('content', '')
-                # Skip commands and login messages
-                if any(x in content for x in ['<command-', '<local-command-', 'Login successful', '/login']):
-                    continue
-                # Clean HTML tags and get first meaningful text
-                text = re.sub(r'<[^>]+>', '', content).strip()
-                if len(text) > 10:  # Skip very short messages
-                    print(text[:30])
-                    break
-except:
-    pass
-PYEOF
-"$TRANSCRIPT_PATH" 2>/dev/null || true)
-fi
-[ -z "$SESSION_NAME" ] && SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
+# Get session title (cached, LLM-generated if API configured)
+SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>/dev/null || basename "$CWD" 2>/dev/null || echo "?")
 
 # Check auto-approve mode
 AUTO_APPROVE=false
