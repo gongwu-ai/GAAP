@@ -23,7 +23,7 @@ mkdir -p ~/.claude/tmp
 TMPDIR=~/.claude/tmp claude plugin install gaap@gaap --scope project
 ```
 
-**Fallback** (if plugin install fails):
+Or use the installer script:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gongwu-ai/GAAP/main/install.sh | bash
 ```
@@ -45,11 +45,11 @@ Due to [Claude Code bug #14410](https://github.com/anthropics/claude-code/issues
 ```bash
 # After plugin install, run this in your project directory
 python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
-# or for fallback install:
-python3 ~/.gaap/scripts/install_hooks.py
 ```
 
 This writes hooks to your project's `.claude/settings.json`, bypassing the plugin system limitation.
+
+**Note**: The global `~/.claude/settings.json` must have `"enabledPlugins": {"gaap@gaap": true}` for Claude Code to recognize the plugin. This is set automatically by `claude plugin install`.
 
 ### Configuration
 
@@ -101,7 +101,7 @@ If empty, verify hooks are installed:
 # Check project settings
 cat .claude/settings.json | grep -A5 hooks
 
-# Re-install hooks if needed
+# Re-install hooks if needed (safe to run multiple times)
 python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
 ```
 

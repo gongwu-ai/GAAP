@@ -76,8 +76,6 @@ Due to a [Claude Code bug](https://github.com/anthropics/claude-code/issues/1441
 Install hooks directly to the project:
 ```bash
 python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py
-# or for fallback install:
-python3 ~/.gaap/scripts/install_hooks.py
 ```
 
 This writes hooks to `.claude/settings.json`. Verify with:
@@ -85,11 +83,11 @@ This writes hooks to `.claude/settings.json`. Verify with:
 cat .claude/settings.json | grep -A5 hooks
 ```
 
+**Note**: Running `install_hooks.py` multiple times is safe - it removes old GAAP hooks before adding new ones.
+
 ## Fallback
 
 If the interactive setup doesn't work, user can run:
 ```bash
 python3 ~/.claude/plugins/marketplaces/gaap/scripts/setup.py
-# or if installed via fallback:
-python3 ~/.gaap/scripts/setup.py
 ```
