@@ -31,6 +31,7 @@ HOOKS_CONFIG = {
     ],
     "Notification": [
         {
+            "matcher": "idle_prompt",
             "hooks": [
                 {
                     "type": "command",

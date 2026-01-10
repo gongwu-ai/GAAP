@@ -16,6 +16,9 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] GAAP hook triggered (Stop/Notification). CL
 
 read -r input || true
 
+# DEBUG: log raw input to see event type
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] INPUT: ${input:0:500}" >> "${TMPDIR:-/tmp}/gaap_input.log"
+
 # Parse project directory from hook input
 CWD=$(echo "$input" | grep -o '"cwd":"[^"]*"' | sed 's/"cwd":"//;s/"$//' || true)
 
