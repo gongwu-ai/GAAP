@@ -128,27 +128,43 @@ def load_config():
     return {}
 
 
-def setup_compression():
-    print_step(2, 3, "配置消息压缩 (可选)")
+def setup_llm_mode():
+    print_step(2, 3, "配置 LLM 模式")
 
     existing = load_config()
+    current_mode = existing.get("llm_mode", "none")
     compress_cfg = existing.get("compress", {})
-    is_compressed = existing.get("message_format") == "compressed"
 
     print(f"""
-{YELLOW}消息压缩功能:{RESET}
-飞书不渲染 Markdown，使用 LLM 将消息压缩成口语化格式。
-压缩失败会自动回退到全量发送。
+{YELLOW}LLM 模式选择:{RESET}
+
+  {CYAN}1{RESET}. {BOLD}none{RESET} - 仅规则过滤 + 纯文本
+     无需 LLM，使用正则检测是否需要输入，直接发送原始消息。
+     {GREEN}(免费，无 API 调用){RESET}
+
+  {CYAN}2{RESET}. {BOLD}smart{RESET} - 规则过滤 + LLM 压缩
+     先用规则判断是否需要通知，再用 LLM 压缩消息。
+     {YELLOW}(节省 tokens，仅在需要时调用 API){RESET}
+
+  {CYAN}3{RESET}. {BOLD}compress_all{RESET} - 全量 LLM 压缩
+     每次停止都用 LLM 压缩消息并发送。
+     {RED}(成本较高，但信息最完整){RESET}
 """)
 
-    default_enable = "y" if is_compressed else "n"
-    choice = get_input(f"启用消息压缩? (y/N)", default_enable).lower()
+    # Determine default based on current config
+    mode_map = {"none": "1", "smart": "2", "compress_all": "3"}
+    default_choice = mode_map.get(current_mode, "1")
 
-    if choice != 'y':
-        config = {"message_format": "full"}
+    choice = get_input("选择模式", default_choice)
+
+    if choice == "1":
+        config = {"llm_mode": "none"}
         save_config(config)
-        print(f"\n{GREEN}✓ 将发送全量消息{RESET}")
+        print(f"\n{GREEN}✓ 已设置为 none 模式 (规则过滤 + 纯文本){RESET}")
         return True
+
+    # For smart and compress_all, need LLM config
+    llm_mode = "smart" if choice == "2" else "compress_all"
 
     print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
 
@@ -184,7 +200,7 @@ def setup_compression():
     lang = "en" if lang_choice == "2" else "zh"
 
     config = {
-        "message_format": "compressed",
+        "llm_mode": llm_mode,
         "compress": {
             "base_url": base_url,
             "model": model,
@@ -194,7 +210,8 @@ def setup_compression():
     }
     save_config(config)
 
-    print(f"\n{GREEN}✓ 压缩配置已保存{RESET}")
+    mode_desc = "规则过滤 + LLM 压缩" if llm_mode == "smart" else "全量 LLM 压缩"
+    print(f"\n{GREEN}✓ 已设置为 {llm_mode} 模式 ({mode_desc}){RESET}")
     print(f"  Base URL: {base_url}")
     print(f"  Model: {model}")
     print(f"  Language: {'中文' if lang == 'zh' else 'English'}")
@@ -210,14 +227,25 @@ def save_config(config):
 def show_summary():
     print_step(3, 3, "配置完成!")
 
+    # Load and display current config
+    config = load_config()
+    llm_mode = config.get("llm_mode", "none")
+    mode_desc = {
+        "none": "规则过滤 + 纯文本",
+        "smart": "规则过滤 + LLM 压缩",
+        "compress_all": "全量 LLM 压缩"
+    }.get(llm_mode, "未知")
+
     print(f"""
 {GREEN}╔══════════════════════════════════════════════════════════╗
 ║  ✓ GAAP 配置成功!                                        ║
 ╚══════════════════════════════════════════════════════════╝{RESET}
 
+{BOLD}当前 LLM 模式:{RESET} {CYAN}{llm_mode}{RESET} ({mode_desc})
+
 {BOLD}配置文件:{RESET}
   • {CYAN}.env{RESET} - FEISHU_WEBHOOK_URL, GAAP_API_KEY
-  • {CYAN}.claude/gaap.json{RESET} - 压缩设置
+  • {CYAN}.claude/gaap.json{RESET} - LLM 模式设置
 
 {YELLOW}提示: .env 通常已在 .gitignore 中{RESET}
 
@@ -237,7 +265,7 @@ def main():
         sys.exit(1)
 
     print()
-    setup_compression()
+    setup_llm_mode()
 
     print()
     show_summary()

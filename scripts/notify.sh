@@ -1,7 +1,11 @@
 #!/bin/bash
 ###############################################################################
 # GAAP - Smart Feishu Notification Script (Project-level)
-# Only sends notifications when Claude needs user input
+#
+# LLM Modes:
+#   - none:         Rule-based filter + plain text (no LLM)
+#   - smart:        Rule-based filter + LLM compress (saves tokens)
+#   - compress_all: Always LLM compress (costly but informative)
 ###############################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,6 +34,14 @@ WEBHOOK_URL=""
 PERMISSION_MODE=$(echo "$input" | grep -o '"permission_mode":"[^"]*"' | sed 's/"permission_mode":"//;s/"$//' || echo "default")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 
+# Load LLM mode from config (none | smart | compress_all)
+LLM_MODE="none"
+CONFIG_FILE="$CWD/.claude/gaap.json"
+if [ -f "$CONFIG_FILE" ]; then
+    LLM_MODE=$(grep -o '"llm_mode":"[^"]*"' "$CONFIG_FILE" | sed 's/"llm_mode":"//;s/"$//' || echo "none")
+    [ -z "$LLM_MODE" ] && LLM_MODE="none"
+fi
+
 # Get hostname (short form)
 HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 
@@ -42,36 +54,69 @@ case "$PERMISSION_MODE" in
     acceptEdits|dontAsk|bypassPermissions) AUTO_APPROVE=true ;;
 esac
 
-# Read last message and detect questions
-NEEDS_INPUT=false
+# Read last message from transcript
 LAST_CONTENT=""
-
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     LAST_CONTENT=$(tail -50 "$TRANSCRIPT_PATH" | grep '"type":"assistant"' | tail -1 | \
         grep -o '"text":"[^"]*"' | tail -1 | \
         sed 's/"text":"//;s/"$//' | sed 's/\\n/ /g' || true)
 fi
 
-if [ -n "$LAST_CONTENT" ]; then
-    echo "$LAST_CONTENT" | grep -qE '\?|？' && NEEDS_INPUT=true
-    echo "$LAST_CONTENT" | grep -qE '要不要|是否|可以吗|怎么样|如何|什么|哪个|吗$|呢$|确认|选择|输入|告诉我' && NEEDS_INPUT=true
-    echo "$LAST_CONTENT" | grep -qiE 'need|want|should|would you|can you|please|let me know|confirm|choose|select|prefer|approve|accept|reject' && NEEDS_INPUT=true
-fi
+# Rule-based detection for questions/input needed
+detect_needs_input() {
+    local content="$1"
+    [ -z "$content" ] && return 1
+    echo "$content" | grep -qE '\?|？' && return 0
+    echo "$content" | grep -qE '要不要|是否|可以吗|怎么样|如何|什么|哪个|吗$|呢$|确认|选择|输入|告诉我' && return 0
+    echo "$content" | grep -qiE 'need|want|should|would you|can you|please|let me know|confirm|choose|select|prefer|approve|accept|reject' && return 0
+    return 1
+}
 
-# Decide whether to notify
+# Decide whether to send notification and how to format message
 SEND_NOTIFICATION=false
-if [ "$AUTO_APPROVE" = false ]; then
-    [ "$NEEDS_INPUT" = true ] || [ -z "$LAST_CONTENT" ] && SEND_NOTIFICATION=true
-else
-    [ "$NEEDS_INPUT" = true ] && SEND_NOTIFICATION=true
-fi
+USE_LLM_COMPRESS=false
+MESSAGE=""
+
+case "$LLM_MODE" in
+    compress_all)
+        # Always send, always use LLM compression
+        SEND_NOTIFICATION=true
+        USE_LLM_COMPRESS=true
+        ;;
+    smart)
+        # Rule-based filter first, then LLM compress if sending
+        if detect_needs_input "$LAST_CONTENT"; then
+            SEND_NOTIFICATION=true
+            USE_LLM_COMPRESS=true
+        elif [ "$AUTO_APPROVE" = false ] && [ -z "$LAST_CONTENT" ]; then
+            # No content available, still notify
+            SEND_NOTIFICATION=true
+            USE_LLM_COMPRESS=false
+        fi
+        ;;
+    none|*)
+        # Rule-based filter, plain text delivery (no LLM)
+        if [ "$AUTO_APPROVE" = false ]; then
+            detect_needs_input "$LAST_CONTENT" && SEND_NOTIFICATION=true
+            [ -z "$LAST_CONTENT" ] && SEND_NOTIFICATION=true
+        else
+            detect_needs_input "$LAST_CONTENT" && SEND_NOTIFICATION=true
+        fi
+        USE_LLM_COMPRESS=false
+        ;;
+esac
 
 # Send notification
 if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
-        # Try to compress message using LLM (fallback to original)
-        COMPRESSED=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
-        MESSAGE="[$HOST|$SESSION_NAME] $COMPRESSED"
+        if [ "$USE_LLM_COMPRESS" = true ]; then
+            # Try to compress message using LLM (fallback to plain text)
+            COMPRESSED=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
+            MESSAGE="[$HOST|$SESSION_NAME] $COMPRESSED"
+        else
+            # Plain text delivery
+            MESSAGE="[$HOST|$SESSION_NAME] $LAST_CONTENT"
+        fi
     else
         MESSAGE="[$HOST|$SESSION_NAME] 等待输入"
     fi
