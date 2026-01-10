@@ -90,11 +90,19 @@ case "$PERMISSION_MODE" in
 esac
 
 # Read last message from transcript
+# Format: {"message":{"role":"assistant","content":[{"type":"text","text":"..."}]}}
 LAST_CONTENT=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    LAST_CONTENT=$(tail -50 "$TRANSCRIPT_PATH" | grep '"type":"assistant"' | tail -1 | \
-        grep -o '"text":"[^"]*"' | tail -1 | \
-        sed 's/"text":"//;s/"$//' | sed 's/\\n/ /g' || true)
+    # Try new format first (role:assistant), fallback to old format (type:assistant)
+    LAST_LINE=$(tail -50 "$TRANSCRIPT_PATH" | grep '"role":"assistant"' | tail -1 || true)
+    if [ -z "$LAST_LINE" ]; then
+        LAST_LINE=$(tail -50 "$TRANSCRIPT_PATH" | grep '"type":"assistant"' | tail -1 || true)
+    fi
+    if [ -n "$LAST_LINE" ]; then
+        # Extract text from content array or direct text field
+        LAST_CONTENT=$(echo "$LAST_LINE" | grep -o '"text":"[^"]*"' | tail -1 | \
+            sed 's/"text":"//;s/"$//' | sed 's/\\n/ /g' || true)
+    fi
 fi
 
 # Rule-based detection for questions/input needed
