@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 GAAP - Session Title Generator with Caching
-Generates intelligent session titles using LLM or falls back to folder_uuid
+
+Generates intelligent session titles using Anthropic SDK.
+Only supports Anthropic protocol compatible APIs.
 """
 
 import json
@@ -10,9 +12,13 @@ import os
 import hashlib
 import re
 import time
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+try:
+    import anthropic
+except ImportError:
+    # Fallback mode - no LLM title generation
+    anthropic = None
 
 # Project-level config (via GAAP_PROJECT_DIR env var)
 PROJECT_DIR = os.environ.get("GAAP_PROJECT_DIR", ".")
@@ -105,32 +111,29 @@ def resolve_api_key(key_str):
     return key_str
 
 
-def call_api(endpoint, api_key, model, message, lang="zh"):
-    """Call LLM API - endpoint should be full URL (e.g. https://api.anthropic.com/v1/messages)"""
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01"
-    }
+def call_api(base_url, api_key, model, message, lang="zh"):
+    """Call Anthropic-compatible API using SDK (handles /v1/messages automatically)"""
+    if not anthropic:
+        return None
+
+    client = anthropic.Anthropic(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=15.0,
+    )
 
     prompt = TITLE_PROMPTS.get(lang, TITLE_PROMPTS["zh"]) + message
 
-    data = {
-        "model": model,
-        "max_tokens": 50,
-        "messages": [{"role": "user", "content": prompt}]
-    }
+    response = client.messages.create(
+        model=model,
+        max_tokens=50,
+        messages=[{"role": "user", "content": prompt}]
+    )
 
-    req = urllib.request.Request(endpoint, json.dumps(data).encode(), headers)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        result = json.load(resp)
-        # Validate response structure
-        if not result.get("content") or not result["content"][0].get("text"):
-            raise ValueError("Invalid API response: missing content.text")
-        title = result["content"][0]["text"].strip()
-        # Clean quotes if present
-        title = re.sub(r'^["\']|["\']$', '', title)
-        return title
+    title = response.content[0].text.strip()
+    # Clean quotes if present
+    title = re.sub(r'^["\']|["\']$', '', title)
+    return title
 
 
 def extract_first_message(transcript_path):
@@ -179,7 +182,7 @@ def get_message_hash(message):
 def generate_title(transcript_path, cwd):
     """
     Generate session title with caching
-    - Uses API if configured
+    - Uses Anthropic SDK if configured
     - Falls back to folder_name_uuid
     - Caches result to avoid repeated API calls
     - Includes timestamp for cache cleanup
@@ -204,18 +207,18 @@ def generate_title(transcript_path, cwd):
 
     # Try API if configured (llm_mode is smart or compress_all)
     llm_mode = config.get("llm_mode", "none") if config else "none"
-    if llm_mode in ["smart", "compress_all"] and first_message:
+    if llm_mode in ["smart", "compress_all"] and first_message and anthropic:
         compress_cfg = config.get("compress", {})
-        endpoint = compress_cfg.get("endpoint", "")
+        base_url = compress_cfg.get("base_url", "")
         model = compress_cfg.get("model", "claude-3-haiku-20240307")
         api_key = resolve_api_key(compress_cfg.get("api_key"))
         lang = compress_cfg.get("lang", "zh")
 
-        if api_key and endpoint:
+        if api_key and base_url:
             try:
-                title = call_api(endpoint, api_key, model, first_message, lang)
-            except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as e:
-                log_error(f"API call failed for session {session_id}", e)
+                title = call_api(base_url, api_key, model, first_message, lang)
+            except anthropic.APIError as e:
+                log_error(f"Anthropic API error for session {session_id}", e)
             except Exception as e:
                 log_error(f"Unexpected error generating title for {session_id}", e)
 

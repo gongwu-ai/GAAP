@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """
-GAAP - Message Compression using Anthropic API
+GAAP - Message Compression using Anthropic SDK
+
+Only supports Anthropic protocol compatible APIs.
 """
 
 import json
 import sys
 import os
 import time
-import urllib.request
-import urllib.error
+
+try:
+    import anthropic
+except ImportError:
+    print("Error: anthropic package required. Run: pip install anthropic", file=sys.stderr)
+    sys.exit(1)
 
 # Project-level config (via GAAP_PROJECT_DIR env var)
 PROJECT_DIR = os.environ.get("GAAP_PROJECT_DIR", ".")
@@ -53,34 +59,29 @@ def resolve_api_key(key_str):
     return key_str
 
 
-def call_api(endpoint, api_key, model, message, lang="zh"):
-    """Call LLM API - endpoint should be full URL (e.g. https://api.anthropic.com/v1/messages)"""
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01"
-    }
-    data = {
-        "model": model,
-        "max_tokens": 200,
-        "system": PROMPTS.get(lang, PROMPTS["zh"]),
-        "messages": [{"role": "user", "content": message}]
-    }
+def call_api(base_url, api_key, model, message, lang="zh"):
+    """Call Anthropic-compatible API using SDK (handles /v1/messages automatically)"""
+    client = anthropic.Anthropic(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=15.0,
+    )
 
-    req = urllib.request.Request(endpoint, json.dumps(data).encode(), headers)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        result = json.load(resp)
-        # Validate response structure
-        if not result.get("content") or not result["content"][0].get("text"):
-            raise ValueError("Invalid API response: missing content.text")
-        return result["content"][0]["text"]
+    response = client.messages.create(
+        model=model,
+        max_tokens=200,
+        system=PROMPTS.get(lang, PROMPTS["zh"]),
+        messages=[{"role": "user", "content": message}]
+    )
+
+    return response.content[0].text
 
 
 def compress(message):
-    """Compress message using LLM API. Returns None on failure.
+    """Compress message using Anthropic SDK. Returns None on failure.
 
     Called by notify.sh when llm_mode is 'smart' or 'compress_all'.
-    Just needs valid compress config with API key to work.
+    Only supports Anthropic protocol compatible APIs.
     """
     config = load_config()
     if not config:
@@ -90,8 +91,8 @@ def compress(message):
     if not compress_cfg:
         return None
 
-    # Use endpoint as-is (user provides full URL)
-    endpoint = compress_cfg.get("endpoint", "https://api.anthropic.com/v1/messages")
+    # base_url - SDK automatically handles /v1/messages
+    base_url = compress_cfg.get("base_url", "https://api.anthropic.com")
     model = compress_cfg.get("model", "claude-3-haiku-20240307")
     api_key = resolve_api_key(compress_cfg.get("api_key"))
     lang = compress_cfg.get("lang", "zh")
@@ -100,9 +101,9 @@ def compress(message):
         return None
 
     try:
-        return call_api(endpoint, api_key, model, message, lang)
-    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as e:
-        log_error("API call failed for message compression", e)
+        return call_api(base_url, api_key, model, message, lang)
+    except anthropic.APIError as e:
+        log_error("Anthropic API error", e)
         return None
     except Exception as e:
         log_error("Unexpected error during compression", e)
