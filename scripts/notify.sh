@@ -36,21 +36,52 @@ TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"
 
 # Load config from gaap.json
 LLM_MODE="none"
-PYTHON="python3"
+PYTHON=""
 CONFIG_FILE="$CWD/.claude/gaap.json"
 if [ -f "$CONFIG_FILE" ]; then
     LLM_MODE=$(grep -o '"llm_mode":"[^"]*"' "$CONFIG_FILE" | sed 's/"llm_mode":"//;s/"$//' || echo "none")
     [ -z "$LLM_MODE" ] && LLM_MODE="none"
     # Get Python path (saved by install_hooks.py)
     PYTHON_PATH=$(grep -o '"python_path":"[^"]*"' "$CONFIG_FILE" | sed 's/"python_path":"//;s/"$//' || true)
-    [ -n "$PYTHON_PATH" ] && [ -x "$PYTHON_PATH" ] && PYTHON="$PYTHON_PATH"
+    if [ -n "$PYTHON_PATH" ] && [ -x "$PYTHON_PATH" ]; then
+        PYTHON="$PYTHON_PATH"
+    fi
 fi
+
+# Fallback to system python3 if not configured
+if [ -z "$PYTHON" ]; then
+    if command -v python3 &>/dev/null; then
+        PYTHON="python3"
+    fi
+fi
+
+# Helper: send error to Feishu
+send_error() {
+    local error_msg="$1"
+    local host=$(hostname -s 2>/dev/null || echo "?")
+    local msg="[$host|GAAP] ⚠️ $error_msg"
+    curl -s -X POST "$WEBHOOK_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$msg\"}}" \
+        --connect-timeout 5 --max-time 10 > /dev/null 2>&1 || true
+}
 
 # Get hostname (short form)
 HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 
+# Check Python availability
+if [ -z "$PYTHON" ]; then
+    send_error "Python未找到! 请运行: python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py"
+    exit 1
+fi
+
 # Get session title (cached, LLM-generated if API configured)
-SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>/dev/null || basename "$CWD" 2>/dev/null || echo "?")
+SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>&1)
+if [ $? -ne 0 ]; then
+    # Script failed, send error with details
+    send_error "get_session_title.py 失败: $SESSION_NAME"
+    SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
+fi
 
 # Check auto-approve mode
 AUTO_APPROVE=false
@@ -115,7 +146,15 @@ if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
         if [ "$USE_LLM_COMPRESS" = true ]; then
             # Try to compress message using LLM (fallback to plain text)
-            COMPRESSED=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
+            COMPRESS_OUTPUT=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/compress.py" 2>&1)
+            COMPRESS_STATUS=$?
+            if [ $COMPRESS_STATUS -ne 0 ]; then
+                # Compression failed, send error and use plain text
+                send_error "compress.py 失败: $COMPRESS_OUTPUT"
+                COMPRESSED="$LAST_CONTENT"
+            else
+                COMPRESSED="$COMPRESS_OUTPUT"
+            fi
             MESSAGE="[$HOST|$SESSION_NAME] $COMPRESSED"
         else
             # Plain text delivery
