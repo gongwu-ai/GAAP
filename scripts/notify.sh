@@ -28,7 +28,9 @@ WEBHOOK_URL=""
 [ -z "$WEBHOOK_URL" ] && [ -n "$CWD" ] && [ -f "$CWD/.claude/feishu-webhook-url" ] && \
     WEBHOOK_URL=$(cat "$CWD/.claude/feishu-webhook-url" 2>/dev/null | tr -d '\n')
 
-[ -z "$WEBHOOK_URL" ] && exit 0
+# DEBUG: trace webhook loading
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] CWD=$CWD, WEBHOOK_URL set=${WEBHOOK_URL:+yes}" >> "${CWD:-.}/.claude/.gaap_trace.log" 2>/dev/null || true
+[ -z "$WEBHOOK_URL" ] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] EXIT: no webhook URL" >> "${CWD:-.}/.claude/.gaap_trace.log" 2>/dev/null && exit 0
 
 # Parse hook input
 PERMISSION_MODE=$(echo "$input" | grep -o '"permission_mode":"[^"]*"' | sed 's/"permission_mode":"//;s/"$//' || echo "default")
@@ -39,10 +41,10 @@ LLM_MODE="none"
 PYTHON=""
 CONFIG_FILE="$CWD/.claude/gaap.json"
 if [ -f "$CONFIG_FILE" ]; then
-    LLM_MODE=$(grep -o '"llm_mode":"[^"]*"' "$CONFIG_FILE" | sed 's/"llm_mode":"//;s/"$//' || echo "none")
+    LLM_MODE=$(grep -o '"llm_mode"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/"llm_mode"[[:space:]]*:[[:space:]]*"//;s/"$//' || echo "none")
     [ -z "$LLM_MODE" ] && LLM_MODE="none"
     # Get Python path (saved by install_hooks.py)
-    PYTHON_PATH=$(grep -o '"python_path":"[^"]*"' "$CONFIG_FILE" | sed 's/"python_path":"//;s/"$//' || true)
+    PYTHON_PATH=$(grep -o '"python_path"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/"python_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
     if [ -n "$PYTHON_PATH" ] && [ -x "$PYTHON_PATH" ]; then
         PYTHON="$PYTHON_PATH"
     fi
@@ -103,6 +105,13 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
         LAST_CONTENT=$(echo "$LAST_LINE" | grep -o '"text":"[^"]*"' | tail -1 | \
             sed 's/"text":"//;s/"$//' | sed 's/\\n/ /g' || true)
     fi
+    # DEBUG: Log to file
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] LAST_LINE len=${#LAST_LINE}, LAST_CONTENT len=${#LAST_CONTENT}" >> "$CWD/.claude/.gaap_trace.log"
+    if [ -z "$LAST_CONTENT" ]; then
+        CONTENT_TYPES=$(echo "$LAST_LINE" | grep -o '"type":"[^"]*"' | tr '\n' ',' || echo "unknown")
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] No text found. types=$CONTENT_TYPES" >> "$CWD/.claude/.gaap_trace.log"
+        send_error "DEBUG: 没找到text. types=$CONTENT_TYPES"
+    fi
 fi
 
 # Rule-based detection for questions/input needed
@@ -150,12 +159,15 @@ case "$LLM_MODE" in
 esac
 
 # Send notification
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] SEND_NOTIFICATION=$SEND_NOTIFICATION, USE_LLM_COMPRESS=$USE_LLM_COMPRESS, LLM_MODE=$LLM_MODE" >> "$CWD/.claude/.gaap_trace.log"
 if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
         if [ "$USE_LLM_COMPRESS" = true ]; then
             # Try to compress message using LLM (fallback to plain text)
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Calling compress.py with PYTHON=$PYTHON" >> "$CWD/.claude/.gaap_trace.log"
             COMPRESS_OUTPUT=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/compress.py" 2>&1)
             COMPRESS_STATUS=$?
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] compress.py status=$COMPRESS_STATUS, output_len=${#COMPRESS_OUTPUT}" >> "$CWD/.claude/.gaap_trace.log"
             if [ $COMPRESS_STATUS -ne 0 ]; then
                 # Compression failed, send error and use plain text
                 send_error "compress.py 失败: $COMPRESS_OUTPUT"
