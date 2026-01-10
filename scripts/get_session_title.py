@@ -9,6 +9,7 @@ import sys
 import os
 import hashlib
 import re
+import time
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -17,11 +18,27 @@ from pathlib import Path
 PROJECT_DIR = os.environ.get("GAAP_PROJECT_DIR", ".")
 CONFIG_PATH = os.path.join(PROJECT_DIR, ".claude/gaap.json")
 CACHE_PATH = os.path.join(PROJECT_DIR, ".claude/.gaap_session_cache.json")
+ERROR_LOG_PATH = os.path.join(PROJECT_DIR, ".claude/.gaap_error.log")
+
+# Cache settings
+MAX_CACHE_ENTRIES = 50  # Keep only the most recent sessions
 
 TITLE_PROMPTS = {
     "zh": "将下面的用户消息总结为一个简短的标题（5-10个字），只输出标题，不要引号或其他内容：\n\n",
     "en": "Summarize the user message below into a short title (3-6 words). Output only the title, no quotes or extra text:\n\n"
 }
+
+
+def log_error(message, error=None):
+    """Log errors to a file for debugging"""
+    try:
+        os.makedirs(os.path.dirname(ERROR_LOG_PATH), exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        error_detail = f": {type(error).__name__}: {error}" if error else ""
+        with open(ERROR_LOG_PATH, 'a') as f:
+            f.write(f"[{timestamp}] {message}{error_detail}\n")
+    except Exception:
+        pass  # Don't fail if we can't write to log
 
 
 def load_config():
@@ -31,7 +48,8 @@ def load_config():
     try:
         with open(CONFIG_PATH, 'r') as f:
             return json.load(f)
-    except:
+    except (IOError, json.JSONDecodeError) as e:
+        log_error(f"Failed to load config from {CONFIG_PATH}", e)
         return None
 
 
@@ -42,18 +60,40 @@ def load_cache():
     try:
         with open(CACHE_PATH, 'r') as f:
             return json.load(f)
-    except:
+    except (IOError, json.JSONDecodeError) as e:
+        log_error(f"Failed to load cache from {CACHE_PATH}", e)
         return {}
 
 
+def cleanup_cache(cache):
+    """
+    Remove oldest entries if cache exceeds MAX_CACHE_ENTRIES.
+    Entries are sorted by timestamp (oldest first).
+    """
+    if len(cache) <= MAX_CACHE_ENTRIES:
+        return cache
+
+    # Sort entries by timestamp (entries without timestamp go first - oldest)
+    entries = sorted(
+        cache.items(),
+        key=lambda x: x[1].get("timestamp", 0)
+    )
+
+    # Keep only the most recent entries
+    entries_to_keep = entries[-MAX_CACHE_ENTRIES:]
+    return dict(entries_to_keep)
+
+
 def save_cache(cache):
-    """Save session title cache"""
+    """Save session title cache with automatic cleanup"""
     try:
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+        # Clean up old entries before saving
+        cleaned_cache = cleanup_cache(cache)
         with open(CACHE_PATH, 'w') as f:
-            json.dump(cache, f, indent=2, ensure_ascii=False)
-    except:
-        pass
+            json.dump(cleaned_cache, f, indent=2, ensure_ascii=False)
+    except IOError as e:
+        log_error(f"Failed to save cache to {CACHE_PATH}", e)
 
 
 def resolve_api_key(key_str):
@@ -85,6 +125,9 @@ def call_api(base_url, api_key, model, message, lang="zh"):
     req = urllib.request.Request(url, json.dumps(data).encode(), headers)
     with urllib.request.urlopen(req, timeout=5) as resp:
         result = json.load(resp)
+        # Validate response structure
+        if not result.get("content") or not result["content"][0].get("text"):
+            raise ValueError("Invalid API response: missing content.text")
         title = result["content"][0]["text"].strip()
         # Clean quotes if present
         title = re.sub(r'^["\']|["\']$', '', title)
@@ -107,7 +150,8 @@ def extract_first_message(transcript_path):
                     if len(text) > 10:
                         return text[:200]  # Return first 200 chars for title generation
         return None
-    except:
+    except (IOError, json.JSONDecodeError) as e:
+        log_error(f"Failed to extract message from {transcript_path}", e)
         return None
 
 
@@ -139,6 +183,7 @@ def generate_title(transcript_path, cwd):
     - Uses API if configured
     - Falls back to folder_name_uuid
     - Caches result to avoid repeated API calls
+    - Includes timestamp for cache cleanup
     """
     session_id = get_session_id(transcript_path)
     first_message = extract_first_message(transcript_path)
@@ -149,6 +194,9 @@ def generate_title(transcript_path, cwd):
     if session_id in cache:
         cached = cache[session_id]
         if cached.get("message_hash") == message_hash:
+            # Update timestamp on cache hit (keeps active sessions from being cleaned up)
+            cache[session_id]["timestamp"] = int(time.time())
+            save_cache(cache)
             return cached["title"]
 
     # Generate new title
@@ -166,17 +214,20 @@ def generate_title(transcript_path, cwd):
         if api_key and base_url:
             try:
                 title = call_api(base_url, api_key, model, first_message, lang)
-            except:
-                pass  # Fall through to fallback
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as e:
+                log_error(f"API call failed for session {session_id}", e)
+            except Exception as e:
+                log_error(f"Unexpected error generating title for {session_id}", e)
 
     # Fallback
     if not title:
         title = generate_fallback_title(cwd)
 
-    # Save to cache
+    # Save to cache with timestamp for cleanup
     cache[session_id] = {
         "title": title,
-        "message_hash": message_hash
+        "message_hash": message_hash,
+        "timestamp": int(time.time())
     }
     save_cache(cache)
 

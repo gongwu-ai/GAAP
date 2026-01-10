@@ -96,6 +96,13 @@ Check debug log:
 cat /tmp/gaap_debug.log
 ```
 
+**API errors or compression failures?**
+
+Check the error log (captures API failures, config issues, etc.):
+```bash
+cat .claude/.gaap_error.log
+```
+
 If empty, verify hooks are installed:
 ```bash
 # Check project settings
