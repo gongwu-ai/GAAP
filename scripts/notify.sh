@@ -34,19 +34,23 @@ WEBHOOK_URL=""
 PERMISSION_MODE=$(echo "$input" | grep -o '"permission_mode":"[^"]*"' | sed 's/"permission_mode":"//;s/"$//' || echo "default")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 
-# Load LLM mode from config (none | smart | compress_all)
+# Load config from gaap.json
 LLM_MODE="none"
+PYTHON="python3"
 CONFIG_FILE="$CWD/.claude/gaap.json"
 if [ -f "$CONFIG_FILE" ]; then
     LLM_MODE=$(grep -o '"llm_mode":"[^"]*"' "$CONFIG_FILE" | sed 's/"llm_mode":"//;s/"$//' || echo "none")
     [ -z "$LLM_MODE" ] && LLM_MODE="none"
+    # Get Python path (saved by install_hooks.py)
+    PYTHON_PATH=$(grep -o '"python_path":"[^"]*"' "$CONFIG_FILE" | sed 's/"python_path":"//;s/"$//' || true)
+    [ -n "$PYTHON_PATH" ] && [ -x "$PYTHON_PATH" ] && PYTHON="$PYTHON_PATH"
 fi
 
 # Get hostname (short form)
 HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 
 # Get session title (cached, LLM-generated if API configured)
-SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>/dev/null || basename "$CWD" 2>/dev/null || echo "?")
+SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>/dev/null || basename "$CWD" 2>/dev/null || echo "?")
 
 # Check auto-approve mode
 AUTO_APPROVE=false
@@ -111,7 +115,7 @@ if [ "$SEND_NOTIFICATION" = true ]; then
     if [ -n "$LAST_CONTENT" ]; then
         if [ "$USE_LLM_COMPRESS" = true ]; then
             # Try to compress message using LLM (fallback to plain text)
-            COMPRESSED=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
+            COMPRESSED=$(echo "$LAST_CONTENT" | GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/compress.py" 2>/dev/null || echo "$LAST_CONTENT")
             MESSAGE="[$HOST|$SESSION_NAME] $COMPRESSED"
         else
             # Plain text delivery
