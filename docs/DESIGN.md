@@ -127,11 +127,13 @@ GAAP 使用 Anthropic SDK，**只支持 Anthropic 协议兼容的 API**。
 
 ## 依赖
 
-需要安装 Anthropic SDK：
+需要安装 Anthropic SDK 和 SOCKS 代理支持：
 
 ```bash
-pip install anthropic
+pip install anthropic httpx[socks]
 ```
+
+**注意**: `httpx[socks]` 是必装项，支持 SOCKS 代理环境。
 
 ## Fallback 策略
 
