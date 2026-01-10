@@ -60,12 +60,19 @@ def call_anthropic(base_url, api_key, model, message, lang="zh"):
 
 
 def compress(message):
-    """Compress message using Anthropic API. Returns None on failure."""
+    """Compress message using LLM API. Returns None on failure.
+
+    Called by notify.sh when llm_mode is 'smart' or 'compress_all'.
+    Just needs valid compress config with API key to work.
+    """
     config = load_config()
-    if not config or config.get("message_format") != "compressed":
+    if not config:
         return None
 
     compress_cfg = config.get("compress", {})
+    if not compress_cfg:
+        return None
+
     base_url = compress_cfg.get("base_url", "https://api.anthropic.com").rstrip("/")
     model = compress_cfg.get("model", "claude-3-haiku-20240307")
     api_key = resolve_api_key(compress_cfg.get("api_key"))
