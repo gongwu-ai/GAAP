@@ -14,11 +14,25 @@ import re
 import time
 from pathlib import Path
 
+# Check required packages
+MISSING_PACKAGES = []
+
 try:
     import anthropic
 except ImportError:
-    # Fallback mode - no LLM title generation
     anthropic = None
+    MISSING_PACKAGES.append("anthropic")
+
+try:
+    import httpx
+    try:
+        import socksio
+    except ImportError:
+        MISSING_PACKAGES.append("httpx[socks]")
+except ImportError:
+    MISSING_PACKAGES.append("httpx[socks]")
+
+# Note: We don't exit on missing packages here - fallback to UUID titles instead
 
 # Project-level config (via GAAP_PROJECT_DIR env var)
 PROJECT_DIR = os.environ.get("GAAP_PROJECT_DIR", ".")
@@ -207,20 +221,24 @@ def generate_title(transcript_path, cwd):
 
     # Try API if configured (llm_mode is smart or compress_all)
     llm_mode = config.get("llm_mode", "none") if config else "none"
-    if llm_mode in ["smart", "compress_all"] and first_message and anthropic:
-        compress_cfg = config.get("compress", {})
-        base_url = compress_cfg.get("base_url", "")
-        model = compress_cfg.get("model", "claude-3-haiku-20240307")
-        api_key = resolve_api_key(compress_cfg.get("api_key"))
-        lang = compress_cfg.get("lang", "zh")
+    if llm_mode in ["smart", "compress_all"] and first_message:
+        # Check if packages are available
+        if MISSING_PACKAGES:
+            log_error(f"Missing packages for LLM: {', '.join(MISSING_PACKAGES)}. Run: pip install anthropic httpx[socks]")
+        elif anthropic:
+            compress_cfg = config.get("compress", {})
+            base_url = compress_cfg.get("base_url", "")
+            model = compress_cfg.get("model", "claude-3-haiku-20240307")
+            api_key = resolve_api_key(compress_cfg.get("api_key"))
+            lang = compress_cfg.get("lang", "zh")
 
-        if api_key and base_url:
-            try:
-                title = call_api(base_url, api_key, model, first_message, lang)
-            except anthropic.APIError as e:
-                log_error(f"Anthropic API error for session {session_id}", e)
-            except Exception as e:
-                log_error(f"Unexpected error generating title for {session_id}", e)
+            if api_key and base_url:
+                try:
+                    title = call_api(base_url, api_key, model, first_message, lang)
+                except anthropic.APIError as e:
+                    log_error(f"Anthropic API error for session {session_id}", e)
+                except Exception as e:
+                    log_error(f"Unexpected error generating title for {session_id}", e)
 
     # Fallback
     if not title:

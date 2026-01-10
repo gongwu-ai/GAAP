@@ -33,9 +33,40 @@ HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "?")
 TOOL_NAME=$(echo "$input" | grep -o '"tool_name":"[^"]*"' | sed 's/"tool_name":"//;s/"$//' || echo "?")
 TRANSCRIPT_PATH=$(echo "$input" | grep -o '"transcript_path":"[^"]*"' | sed 's/"transcript_path":"//;s/"$//' || true)
 
+# Get Python path from config (saved by install_hooks.py)
+PYTHON=""
+CONFIG_FILE="$CWD/.claude/gaap.json"
+if [ -f "$CONFIG_FILE" ]; then
+    PYTHON_PATH=$(grep -o '"python_path":"[^"]*"' "$CONFIG_FILE" | sed 's/"python_path":"//;s/"$//' || true)
+    [ -n "$PYTHON_PATH" ] && [ -x "$PYTHON_PATH" ] && PYTHON="$PYTHON_PATH"
+fi
+
+# Fallback to system python3
+[ -z "$PYTHON" ] && command -v python3 &>/dev/null && PYTHON="python3"
+
+# Helper: send error to Feishu
+send_error() {
+    local error_msg="$1"
+    local host=$(hostname -s 2>/dev/null || echo "?")
+    local msg="[$host|GAAP] ⚠️ $error_msg"
+    curl -s -X POST "$WEBHOOK_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$msg\"}}" \
+        --connect-timeout 5 --max-time 10 > /dev/null 2>&1 || true
+}
+
+# Check Python availability
+if [ -z "$PYTHON" ]; then
+    send_error "Python未找到! 请运行: python3 ~/.claude/plugins/marketplaces/gaap/scripts/install_hooks.py"
+    exit 1
+fi
+
 # Get session title (cached, LLM-generated if API configured)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" python3 "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>/dev/null || basename "$CWD" 2>/dev/null || echo "?")
+SESSION_NAME=$(GAAP_PROJECT_DIR="$CWD" GAAP_API_KEY="$GAAP_API_KEY" "$PYTHON" "$SCRIPT_DIR/get_session_title.py" "$TRANSCRIPT_PATH" "$CWD" 2>&1)
+if [ $? -ne 0 ]; then
+    send_error "get_session_title.py 失败: $SESSION_NAME"
+    SESSION_NAME=$(basename "$CWD" 2>/dev/null || echo "?")
+fi
 
 # Send notification
 MESSAGE="[$HOST|$SESSION_NAME] 权限: $TOOL_NAME"

@@ -2,15 +2,19 @@
 """
 GAAP - Install hooks to project .claude/settings.json
 Workaround for Claude Code bug: plugin hooks don't execute
+
+Also saves current Python path for hook execution.
 """
 
 import json
 import os
+import sys
 
 # Find plugin root
 PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.getcwd()
 SETTINGS_PATH = os.path.join(PROJECT_DIR, ".claude/settings.json")
+CONFIG_PATH = os.path.join(PROJECT_DIR, ".claude/gaap.json")
 
 HOOKS_CONFIG = {
     "PermissionRequest": [
@@ -76,6 +80,33 @@ def save_settings(settings):
         json.dump(settings, f, indent=2)
 
 
+def load_config():
+    """Load existing gaap.json config"""
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+
+def save_config(config):
+    """Save gaap.json config"""
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    with open(CONFIG_PATH, 'w') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def save_python_path():
+    """Save current Python executable path to gaap.json"""
+    python_path = sys.executable
+    config = load_config()
+    config["python_path"] = python_path
+    save_config(config)
+    return python_path
+
+
 def main():
     print(f"Project dir: {PROJECT_DIR}")
     print(f"Plugin root: {PLUGIN_ROOT}")
@@ -111,6 +142,10 @@ def main():
     print("\nInstalled hooks:")
     for hook in HOOKS_CONFIG.keys():
         print(f"  - {hook}")
+
+    # Save Python path for hook execution
+    python_path = save_python_path()
+    print(f"\n✓ Python path saved: {python_path}")
 
 
 if __name__ == "__main__":

@@ -10,10 +10,26 @@ import sys
 import os
 import time
 
+# Check required packages
+MISSING_PACKAGES = []
+
 try:
     import anthropic
 except ImportError:
-    print("Error: anthropic package required. Run: pip install anthropic", file=sys.stderr)
+    MISSING_PACKAGES.append("anthropic")
+
+try:
+    import httpx
+    # Check if socks support is available
+    try:
+        import socksio
+    except ImportError:
+        MISSING_PACKAGES.append("httpx[socks]")
+except ImportError:
+    MISSING_PACKAGES.append("httpx[socks]")
+
+if MISSING_PACKAGES:
+    print(f"Error: missing packages: {', '.join(MISSING_PACKAGES)}. Run: pip install anthropic httpx[socks]", file=sys.stderr)
     sys.exit(1)
 
 # Project-level config (via GAAP_PROJECT_DIR env var)
