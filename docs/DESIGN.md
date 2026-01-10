@@ -2,7 +2,11 @@
 
 ## 概述
 
-GAAP 提供三种 LLM 模式来处理 Stop 事件通知：
+GAAP 使用 **Anthropic SDK** 调用 LLM API，只支持 Anthropic 协议兼容的 API。
+
+SDK 会自动处理 `/v1/messages` 路径，用户只需配置 `base_url`。
+
+## LLM 模式
 
 | 模式 | 描述 | API 调用 | 成本 |
 |------|------|----------|------|
@@ -45,7 +49,7 @@ Stop 事件触发
 {
   "llm_mode": "smart",
   "compress": {
-    "endpoint": "https://api.anthropic.com/v1/messages",
+    "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -58,7 +62,7 @@ Stop 事件触发
 {
   "llm_mode": "compress_all",
   "compress": {
-    "endpoint": "https://api.anthropic.com/v1/messages",
+    "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -81,38 +85,27 @@ Stop 事件触发
 need|want|should|would you|can you|please|let me know|confirm|choose|select|prefer|approve|accept|reject
 ```
 
-## 支持的 LLM Provider
+## 支持的 API (Anthropic 协议兼容)
 
-| Provider | endpoint | model 示例 |
+GAAP 使用 Anthropic SDK，**只支持 Anthropic 协议兼容的 API**。
+
+| Provider | base_url | model 示例 |
 |----------|----------|------------|
-| Anthropic | https://api.anthropic.com/v1/messages | claude-3-haiku-20240307 |
-| OpenAI | https://api.openai.com/v1/messages | gpt-4o-mini |
-| DeepSeek | https://api.deepseek.com/v1/messages | deepseek-chat |
-| GLM | https://open.bigmodel.cn/api/anthropic/v1/messages | glm-4-flash |
-| Ollama | http://localhost:11434/v1/messages | llama3.2 |
+| Anthropic | https://api.anthropic.com | claude-3-haiku-20240307 |
+| GLM (智谱) | https://open.bigmodel.cn/api/anthropic | glm-4-flash |
+| OpenRouter | https://openrouter.ai/api/v1 | anthropic/claude-3-haiku |
+
+**注意**: SDK 会自动处理 `/v1/messages` 路径，不要在 base_url 中包含它。
 
 ## 配置示例
 
-### Anthropic Haiku (推荐)
+### Anthropic (默认)
 ```json
 {
   "llm_mode": "smart",
   "compress": {
-    "endpoint": "https://api.anthropic.com/v1/messages",
+    "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
-    "api_key": "$GAAP_API_KEY",
-    "lang": "zh"
-  }
-}
-```
-
-### DeepSeek
-```json
-{
-  "llm_mode": "smart",
-  "compress": {
-    "endpoint": "https://api.deepseek.com/v1/messages",
-    "model": "deepseek-chat",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
   }
@@ -124,7 +117,7 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 {
   "llm_mode": "smart",
   "compress": {
-    "endpoint": "https://open.bigmodel.cn/api/anthropic/v1/messages",
+    "base_url": "https://open.bigmodel.cn/api/anthropic",
     "model": "glm-4-flash",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -132,16 +125,12 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 }
 ```
 
-### 本地 Ollama
-```json
-{
-  "llm_mode": "compress_all",
-  "compress": {
-    "endpoint": "http://localhost:11434/v1/messages",
-    "model": "llama3.2",
-    "lang": "en"
-  }
-}
+## 依赖
+
+需要安装 Anthropic SDK：
+
+```bash
+pip install anthropic
 ```
 
 ## Fallback 策略
@@ -154,10 +143,11 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 ```
 
 失败情况：
+- anthropic 包未安装
 - API key 未配置
 - 网络错误
 - API 返回错误
-- 超时 (5秒)
+- 超时 (15秒)
 
 ## 压缩 Prompt
 

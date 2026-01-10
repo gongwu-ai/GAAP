@@ -67,15 +67,19 @@ When Claude Code finishes responding, the plugin:
 2. Checks if it contains question marks or request keywords
 3. Only sends notification if user input is needed
 
-## Message Compression (Optional)
+## LLM Compression (Optional)
 
 Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
+
+**Requires**: `pip install anthropic`
+
+**GAAP only supports Anthropic protocol compatible APIs** (uses Anthropic SDK).
 
 Run `/gaap:setup` or create `.claude/gaap.json`:
 
 ```json
 {
-  "message_format": "compressed",
+  "llm_mode": "smart",
   "compress": {
     "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
@@ -85,7 +89,22 @@ Run `/gaap:setup` or create `.claude/gaap.json`:
 }
 ```
 
-Works with any Anthropic-compatible API.
+### LLM Modes
+
+| Mode | Description |
+|------|-------------|
+| `none` | Rule-based filter + plain text (no LLM) |
+| `smart` | Rule-based filter + LLM compress (saves tokens) |
+| `compress_all` | Always LLM compress (costly but informative) |
+
+### Supported APIs
+
+| Provider | base_url |
+|----------|----------|
+| Anthropic | `https://api.anthropic.com` |
+| GLM (智谱) | `https://open.bigmodel.cn/api/anthropic` |
+
+SDK handles `/v1/messages` automatically - don't include it in base_url.
 
 ## Troubleshooting
 

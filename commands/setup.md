@@ -25,12 +25,31 @@ FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 
 Note: `.env` is typically auto-ignored by git and many IDEs.
 
-## Step 2: Message Compression (Optional)
+## Step 2: LLM Mode (Optional)
 
-Ask if they want to enable message compression. Feishu doesn't render Markdown, so compression converts messages to plain text using an LLM.
+**GAAP only supports Anthropic protocol compatible APIs** (uses Anthropic SDK).
 
-If yes, ask for:
-- **base_url**: API endpoint (default: `https://api.anthropic.com`)
+**Requires**: `pip install anthropic`
+
+Ask which LLM mode they want:
+
+| Mode | Description |
+|------|-------------|
+| `none` | Rule-based filter + plain text (no LLM, free) |
+| `smart` | Rule-based filter + LLM compress (saves tokens) |
+| `compress_all` | Always LLM compress (costly but informative) |
+
+If `none`, save to `.claude/gaap.json`:
+```json
+{
+  "llm_mode": "none"
+}
+```
+
+If `smart` or `compress_all`, ask for:
+- **base_url**: API endpoint (SDK handles `/v1/messages` automatically)
+  - Anthropic: `https://api.anthropic.com`
+  - GLM (智谱): `https://open.bigmodel.cn/api/anthropic`
 - **model**: Model name (default: `claude-3-haiku-20240307`)
 - **api_key**: API key from their provider
 - **lang**: Output language - `zh` (中文) or `en` (English)
@@ -43,20 +62,13 @@ GAAP_API_KEY=sk-xxx
 Save config to `.claude/gaap.json` (references the env var):
 ```json
 {
-  "message_format": "compressed",
+  "llm_mode": "smart",
   "compress": {
     "base_url": "https://api.anthropic.com",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
   }
-}
-```
-
-If they don't want compression, save:
-```json
-{
-  "message_format": "full"
 }
 ```
 
