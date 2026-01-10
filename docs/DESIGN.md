@@ -45,7 +45,7 @@ Stop 事件触发
 {
   "llm_mode": "smart",
   "compress": {
-    "base_url": "https://api.anthropic.com",
+    "endpoint": "https://api.anthropic.com/v1/messages",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -58,7 +58,7 @@ Stop 事件触发
 {
   "llm_mode": "compress_all",
   "compress": {
-    "base_url": "https://api.anthropic.com",
+    "endpoint": "https://api.anthropic.com/v1/messages",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -83,13 +83,13 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 
 ## 支持的 LLM Provider
 
-| Provider | base_url | model 示例 |
+| Provider | endpoint | model 示例 |
 |----------|----------|------------|
-| Anthropic | (默认) | claude-3-haiku-20240307 |
-| OpenAI | https://api.openai.com/v1 | gpt-4o-mini |
-| DeepSeek | https://api.deepseek.com/v1 | deepseek-chat |
-| GLM | https://open.bigmodel.cn/api/paas/v4 | glm-4-flash |
-| Ollama | http://localhost:11434/v1 | llama3.2 |
+| Anthropic | https://api.anthropic.com/v1/messages | claude-3-haiku-20240307 |
+| OpenAI | https://api.openai.com/v1/messages | gpt-4o-mini |
+| DeepSeek | https://api.deepseek.com/v1/messages | deepseek-chat |
+| GLM | https://open.bigmodel.cn/api/anthropic/v1/messages | glm-4-flash |
+| Ollama | http://localhost:11434/v1/messages | llama3.2 |
 
 ## 配置示例
 
@@ -98,7 +98,7 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 {
   "llm_mode": "smart",
   "compress": {
-    "base_url": "https://api.anthropic.com",
+    "endpoint": "https://api.anthropic.com/v1/messages",
     "model": "claude-3-haiku-20240307",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -111,7 +111,7 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 {
   "llm_mode": "smart",
   "compress": {
-    "base_url": "https://api.deepseek.com/v1",
+    "endpoint": "https://api.deepseek.com/v1/messages",
     "model": "deepseek-chat",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -124,7 +124,7 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 {
   "llm_mode": "smart",
   "compress": {
-    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "endpoint": "https://open.bigmodel.cn/api/anthropic/v1/messages",
     "model": "glm-4-flash",
     "api_key": "$GAAP_API_KEY",
     "lang": "zh"
@@ -137,7 +137,7 @@ need|want|should|would you|can you|please|let me know|confirm|choose|select|pref
 {
   "llm_mode": "compress_all",
   "compress": {
-    "base_url": "http://localhost:11434/v1",
+    "endpoint": "http://localhost:11434/v1/messages",
     "model": "llama3.2",
     "lang": "en"
   }

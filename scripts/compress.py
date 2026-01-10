@@ -53,9 +53,8 @@ def resolve_api_key(key_str):
     return key_str
 
 
-def call_anthropic(base_url, api_key, model, message, lang="zh"):
-    """Call Anthropic API"""
-    url = f"{base_url}/v1/messages"
+def call_api(endpoint, api_key, model, message, lang="zh"):
+    """Call LLM API - endpoint should be full URL (e.g. https://api.anthropic.com/v1/messages)"""
     headers = {
         "Content-Type": "application/json",
         "x-api-key": api_key,
@@ -68,8 +67,8 @@ def call_anthropic(base_url, api_key, model, message, lang="zh"):
         "messages": [{"role": "user", "content": message}]
     }
 
-    req = urllib.request.Request(url, json.dumps(data).encode(), headers)
-    with urllib.request.urlopen(req, timeout=5) as resp:
+    req = urllib.request.Request(endpoint, json.dumps(data).encode(), headers)
+    with urllib.request.urlopen(req, timeout=15) as resp:
         result = json.load(resp)
         # Validate response structure
         if not result.get("content") or not result["content"][0].get("text"):
@@ -91,7 +90,8 @@ def compress(message):
     if not compress_cfg:
         return None
 
-    base_url = compress_cfg.get("base_url", "https://api.anthropic.com").rstrip("/")
+    # Use endpoint as-is (user provides full URL)
+    endpoint = compress_cfg.get("endpoint", "https://api.anthropic.com/v1/messages")
     model = compress_cfg.get("model", "claude-3-haiku-20240307")
     api_key = resolve_api_key(compress_cfg.get("api_key"))
     lang = compress_cfg.get("lang", "zh")
@@ -100,7 +100,7 @@ def compress(message):
         return None
 
     try:
-        return call_anthropic(base_url, api_key, model, message, lang)
+        return call_api(endpoint, api_key, model, message, lang)
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as e:
         log_error("API call failed for message compression", e)
         return None
