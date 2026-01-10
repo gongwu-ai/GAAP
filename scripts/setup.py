@@ -166,9 +166,13 @@ def setup_llm_mode():
     # For smart and compress_all, need LLM config
     llm_mode = "smart" if choice == "2" else "compress_all"
 
-    print(f"\n{BOLD}配置 LLM Endpoint:{RESET}\n")
+    print(f"\n{BOLD}配置 LLM Endpoint:{RESET}")
+    print(f"{YELLOW}请输入完整的 API 地址，例如:{RESET}")
+    print(f"  Anthropic: https://api.anthropic.com/v1/messages")
+    print(f"  GLM: https://open.bigmodel.cn/api/anthropic/v1/messages")
+    print(f"  DeepSeek: https://api.deepseek.com/v1/messages\n")
 
-    base_url = get_input("Base URL", compress_cfg.get("base_url", "https://api.anthropic.com"))
+    endpoint = get_input("Endpoint", compress_cfg.get("endpoint", "https://api.anthropic.com/v1/messages"))
     model = get_input("Model", compress_cfg.get("model", "claude-3-haiku-20240307"))
 
     print(f"\n{YELLOW}API Key 会保存到 .env 文件{RESET}")
@@ -202,7 +206,7 @@ def setup_llm_mode():
     config = {
         "llm_mode": llm_mode,
         "compress": {
-            "base_url": base_url,
+            "endpoint": endpoint,
             "model": model,
             "api_key": api_key_ref,
             "lang": lang
@@ -212,7 +216,7 @@ def setup_llm_mode():
 
     mode_desc = "规则过滤 + LLM 压缩" if llm_mode == "smart" else "全量 LLM 压缩"
     print(f"\n{GREEN}✓ 已设置为 {llm_mode} 模式 ({mode_desc}){RESET}")
-    print(f"  Base URL: {base_url}")
+    print(f"  Endpoint: {endpoint}")
     print(f"  Model: {model}")
     print(f"  Language: {'中文' if lang == 'zh' else 'English'}")
     return True

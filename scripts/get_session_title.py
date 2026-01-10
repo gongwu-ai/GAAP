@@ -105,9 +105,8 @@ def resolve_api_key(key_str):
     return key_str
 
 
-def call_api(base_url, api_key, model, message, lang="zh"):
-    """Call Anthropic-compatible API to generate title"""
-    url = f"{base_url}/v1/messages"
+def call_api(endpoint, api_key, model, message, lang="zh"):
+    """Call LLM API - endpoint should be full URL (e.g. https://api.anthropic.com/v1/messages)"""
     headers = {
         "Content-Type": "application/json",
         "x-api-key": api_key,
@@ -122,8 +121,8 @@ def call_api(base_url, api_key, model, message, lang="zh"):
         "messages": [{"role": "user", "content": prompt}]
     }
 
-    req = urllib.request.Request(url, json.dumps(data).encode(), headers)
-    with urllib.request.urlopen(req, timeout=5) as resp:
+    req = urllib.request.Request(endpoint, json.dumps(data).encode(), headers)
+    with urllib.request.urlopen(req, timeout=15) as resp:
         result = json.load(resp)
         # Validate response structure
         if not result.get("content") or not result["content"][0].get("text"):
@@ -203,17 +202,18 @@ def generate_title(transcript_path, cwd):
     config = load_config()
     title = None
 
-    # Try API if configured
-    if config and config.get("message_format") == "compressed" and first_message:
+    # Try API if configured (llm_mode is smart or compress_all)
+    llm_mode = config.get("llm_mode", "none") if config else "none"
+    if llm_mode in ["smart", "compress_all"] and first_message:
         compress_cfg = config.get("compress", {})
-        base_url = compress_cfg.get("base_url", "").rstrip("/")
+        endpoint = compress_cfg.get("endpoint", "")
         model = compress_cfg.get("model", "claude-3-haiku-20240307")
         api_key = resolve_api_key(compress_cfg.get("api_key"))
         lang = compress_cfg.get("lang", "zh")
 
-        if api_key and base_url:
+        if api_key and endpoint:
             try:
-                title = call_api(base_url, api_key, model, first_message, lang)
+                title = call_api(endpoint, api_key, model, first_message, lang)
             except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as e:
                 log_error(f"API call failed for session {session_id}", e)
             except Exception as e:
