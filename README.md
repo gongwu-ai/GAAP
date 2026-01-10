@@ -71,7 +71,7 @@ When Claude Code finishes responding, the plugin:
 
 Feishu doesn't render Markdown. Enable LLM compression for cleaner messages.
 
-**Requires**: `pip install anthropic`
+**Requires**: `pip install anthropic httpx[socks]`
 
 **GAAP only supports Anthropic protocol compatible APIs** (uses Anthropic SDK).
 

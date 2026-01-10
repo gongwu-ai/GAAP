@@ -29,7 +29,7 @@ Note: `.env` is typically auto-ignored by git and many IDEs.
 
 **GAAP only supports Anthropic protocol compatible APIs** (uses Anthropic SDK).
 
-**Requires**: `pip install anthropic`
+**Requires**: `pip install anthropic httpx[socks]`
 
 Ask which LLM mode they want:
 
