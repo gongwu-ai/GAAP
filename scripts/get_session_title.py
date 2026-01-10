@@ -151,24 +151,53 @@ def call_api(base_url, api_key, model, message, lang="zh"):
 
 
 def extract_first_message(transcript_path):
-    """Extract first meaningful user message from transcript"""
+    """Extract first meaningful user message from transcript
+
+    Supports both old and new transcript formats:
+    - Old: {"type":"user","message":{"content":"..."}}
+    - New: {"message":{"role":"user","content":[{"type":"text","text":"..."}]}}
+    """
     try:
         with open(transcript_path) as f:
             for line in f:
                 data = json.loads(line)
+
+                # Try new format: {"message":{"role":"user","content":[...]}}
+                msg = data.get('message', {})
+                if msg.get('role') == 'user':
+                    content = msg.get('content', [])
+                    if isinstance(content, list):
+                        # Extract text from content array
+                        for item in content:
+                            if isinstance(item, dict) and item.get('type') == 'text':
+                                text = item.get('text', '')
+                                if _is_valid_message(text):
+                                    return text[:200]
+                    elif isinstance(content, str) and _is_valid_message(content):
+                        return content[:200]
+
+                # Try old format: {"type":"user","message":{"content":"..."}}
                 if data.get('type') == 'user':
-                    content = data.get('message', {}).get('content', '')
-                    # Skip commands and login messages
-                    if any(x in content for x in ['<command-', '<local-command-', 'Login successful', '/login']):
-                        continue
-                    # Clean HTML tags
-                    text = re.sub(r'<[^>]+>', '', content).strip()
-                    if len(text) > 10:
-                        return text[:200]  # Return first 200 chars for title generation
+                    content = msg.get('content', '')
+                    if isinstance(content, str) and _is_valid_message(content):
+                        return content[:200]
+
         return None
     except (IOError, json.JSONDecodeError) as e:
         log_error(f"Failed to extract message from {transcript_path}", e)
         return None
+
+
+def _is_valid_message(text):
+    """Check if message is valid (not a command, long enough)"""
+    if not text or len(text) < 10:
+        return False
+    # Skip commands and login messages
+    if any(x in text for x in ['<command-', '<local-command-', 'Login successful', '/login']):
+        return False
+    # Clean HTML tags
+    cleaned = re.sub(r'<[^>]+>', '', text).strip()
+    return len(cleaned) > 10
 
 
 def generate_fallback_title(cwd):
