@@ -161,9 +161,34 @@ case "$LLM_MODE" in
         ;;
 esac
 
+# Deduplication: skip if same content sent within 60 seconds
+DEDUP_FILE="${CWD:-.}/.claude/.gaap_dedup"
+DEDUP_WINDOW=60  # seconds
+
+check_dedup() {
+    local content_hash=$(echo "$LAST_CONTENT" | md5sum | cut -d' ' -f1)
+    local now=$(date +%s)
+
+    if [ -f "$DEDUP_FILE" ]; then
+        local last_hash=$(head -1 "$DEDUP_FILE" 2>/dev/null || true)
+        local last_time=$(tail -1 "$DEDUP_FILE" 2>/dev/null || echo "0")
+        local elapsed=$((now - last_time))
+
+        if [ "$content_hash" = "$last_hash" ] && [ $elapsed -lt $DEDUP_WINDOW ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] DEDUP: skipped (same content, ${elapsed}s ago)" >> "$CWD/.claude/.gaap_trace.log"
+            return 1  # duplicate, skip
+        fi
+    fi
+
+    # Save current hash and timestamp
+    echo "$content_hash" > "$DEDUP_FILE"
+    echo "$now" >> "$DEDUP_FILE"
+    return 0  # not duplicate, proceed
+}
+
 # Send notification
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] SEND_NOTIFICATION=$SEND_NOTIFICATION, USE_LLM_COMPRESS=$USE_LLM_COMPRESS, LLM_MODE=$LLM_MODE" >> "$CWD/.claude/.gaap_trace.log"
-if [ "$SEND_NOTIFICATION" = true ]; then
+if [ "$SEND_NOTIFICATION" = true ] && check_dedup; then
     if [ -n "$LAST_CONTENT" ]; then
         if [ "$USE_LLM_COMPRESS" = true ]; then
             # Try to compress message using LLM (fallback to plain text)
